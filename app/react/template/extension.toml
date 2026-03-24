@@ -1,0 +1,23 @@
+name = "{{ name | replace('-', ' ') | title }}"
+version = "0.1.0"
+{% if description %}
+description = "{{ description | toml_escape }}"
+{% endif %}
+{% if author %}
+author = "{{ author | toml_escape }}"
+{% endif %}
+{% if repository %}
+repository = "{{ repository }}"
+{% endif %}
+icon = "assets/icon.svg"
+readme = "README.md"
+
+[host]
+type = "app"
+
+[host.app]
+kind = "web_app"
+entry = "dist/index.html"
+
+[package]
+paths = ["dist"]

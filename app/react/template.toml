@@ -1,0 +1,40 @@
+[template]
+host_type = "app"
+stack = "react"
+description = "React + Vite app-host extension with the Zelos app extension SDK"
+
+[[template.variables]]
+name = "name"
+prompt = "Extension name (kebab-case)"
+pattern = "[a-z0-9][a-z0-9-]*[a-z0-9]"
+
+[[template.variables]]
+name = "description"
+prompt = "Short description of the extension"
+default = ""
+
+[[template.variables]]
+name = "author"
+prompt = "Author name"
+default = ""
+
+[[template.variables]]
+name = "email"
+prompt = "Author email"
+default = ""
+
+[[template.variables]]
+name = "github"
+prompt = "GitHub username or organization (for repository URLs)"
+default = ""
+
+[template.substitution]
+include = [
+  "extension.toml",
+  "package.json",
+  "package-lock.json",
+  "README.md",
+  "Justfile",
+  ".github/workflows/CI.yml",
+  ".github/workflows/release.yml",
+]

@@ -1,0 +1,53 @@
+[template]
+host_type = "agent"
+stack = "python"
+description = "Python agent extension for Zelos"
+
+[[template.variables]]
+name = "name"
+prompt = "Extension name (kebab-case)"
+pattern = "[a-z0-9][a-z0-9-]*[a-z0-9]"
+
+[[template.variables]]
+name = "description"
+prompt = "Short description of the extension"
+default = ""
+
+[[template.variables]]
+name = "author"
+prompt = "Author name"
+default = ""
+
+[[template.variables]]
+name = "email"
+prompt = "Author email"
+default = ""
+
+[[template.variables]]
+name = "github"
+prompt = "GitHub username or organization (for repository URLs)"
+default = ""
+
+[[template.variables]]
+name = "python_version"
+prompt = "Python version (major.minor, e.g. 3.11)"
+default = "3.11"
+
+[template.substitution]
+include = [
+  "extension.toml",
+  "pyproject.toml",
+  "README.md",
+  "main.py",
+  "extension/__init__.py",
+  "extension/extension.py",
+  "config.schema.json",
+  "LICENSE",
+  ".github/workflows/CI.yml",
+  ".github/workflows/release.yml",
+  "Justfile",
+  "CONTRIBUTING.md",
+]
+
+[template.substitution.dir_renames]
+extension = "{{ project_slug }}"

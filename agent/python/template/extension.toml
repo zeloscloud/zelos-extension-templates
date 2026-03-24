@@ -1,0 +1,26 @@
+name = "{{ name | replace('-', ' ') | title }}"
+version = "0.1.0"
+{% if description %}
+description = "{{ description | toml_escape }}"
+{% endif %}
+{% if author %}
+author = "{{ author | toml_escape }}"
+{% endif %}
+{% if repository %}
+repository = "{{ repository }}"
+{% endif %}
+icon = "assets/icon.svg"
+readme = "README.md"
+
+[config]
+schema = "config.schema.json"
+
+[host]
+type = "agent"
+
+[host.agent]
+entry = "main.py"
+python_version = "{{ python_version }}"
+
+[package]
+paths = ["main.py", "{{ project_slug }}"]

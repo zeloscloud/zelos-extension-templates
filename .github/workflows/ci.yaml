@@ -1,0 +1,104 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: extractions/setup-just@v3
+
+      - name: Validate template structure
+        run: just validate
+
+      - name: Check Python template source formatting
+        run: |
+          pip install -q ruff
+          ruff format --isolated --no-respect-gitignore --check agent/python/template/tests/
+          ruff check --isolated --no-respect-gitignore agent/python/template/tests/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/react/template/.nvmrc
+
+      - name: Check React template source formatting
+        working-directory: app/react/template
+        run: npx -y prettier@3 --check src/
+
+  smoke-agent:
+    name: Smoke test agent/python
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: extractions/setup-just@v3
+
+      - name: Install Zelos CLI
+        run: |
+          curl -fsSL https://release.zeloscloud.io/cli/install.sh | bash
+          echo "$HOME/.zelos/bin" >> $GITHUB_PATH
+        env:
+          INSTALLER_NO_MODIFY_PATH: 1
+
+      - name: Render agent template
+        run: zelos extensions create test-smoke-agent --type agent --no-setup --output /tmp
+        env:
+          ZELOS_EXTENSION_TEMPLATES_DIR: ${{ github.workspace }}
+
+      - name: Run CI checks on rendered project
+        working-directory: /tmp/test-smoke-agent
+        run: just ci
+
+  smoke-app:
+    name: Smoke test app/react
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/react/template/.nvmrc
+          cache: npm
+          cache-dependency-path: app/react/template/package-lock.json
+
+      - uses: extractions/setup-just@v3
+
+      - name: Install Zelos CLI
+        run: |
+          curl -fsSL https://release.zeloscloud.io/cli/install.sh | bash
+          echo "$HOME/.zelos/bin" >> $GITHUB_PATH
+        env:
+          INSTALLER_NO_MODIFY_PATH: 1
+
+      - name: Render app template
+        run: zelos extensions create test-smoke-app --type app --no-setup --output /tmp
+        env:
+          ZELOS_EXTENSION_TEMPLATES_DIR: ${{ github.workspace }}
+
+      - name: Run CI checks on rendered project
+        working-directory: /tmp/test-smoke-app
+        run: just ci
