@@ -68,6 +68,10 @@ jobs:
         env:
           ZELOS_EXTENSION_TEMPLATES_DIR: ${{ github.workspace }}
 
+      - name: Lint rendered workflows
+        working-directory: /tmp/test-smoke-agent
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -shellcheck= -pyflakes= .github/workflows/*.yml
+
       - name: Run CI checks on rendered project
         working-directory: /tmp/test-smoke-agent
         run: just ci
@@ -98,6 +102,10 @@ jobs:
         run: zelos extensions create test-smoke-app --type app --no-setup --output /tmp
         env:
           ZELOS_EXTENSION_TEMPLATES_DIR: ${{ github.workspace }}
+
+      - name: Lint rendered workflows
+        working-directory: /tmp/test-smoke-app
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -shellcheck= -pyflakes= .github/workflows/*.yml
 
       - name: Run CI checks on rendered project
         working-directory: /tmp/test-smoke-app
