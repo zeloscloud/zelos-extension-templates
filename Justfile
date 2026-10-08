@@ -113,6 +113,10 @@ smoke-agent:
     "{{zelos_bin}}" extensions create test-smoke-agent --type agent --no-setup --output "$out"
 
     cd "$out/test-smoke-agent"
+    echo "Locking dependencies as zelos extensions create does ..."
+    uv sync
+    echo "Installing from the lock as the generated CI does ..."
+    just ci-install
     echo "Running generated project CI ..."
     just ci
 
