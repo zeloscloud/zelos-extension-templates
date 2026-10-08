@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "title": "Example panel",
+  "properties": {
+    "precision": {
+      "type": "integer",
+      "title": "Decimal places",
+      "description": "Digits shown after the decimal point for numeric values",
+      "minimum": 0,
+      "maximum": 9,
+      "default": 3
+    },
+    "showProducer": {
+      "type": "boolean",
+      "title": "Show producer",
+      "description": "Add a column with the producer of each value",
+      "default": false
+    }
+  }
+}

@@ -1,0 +1,5 @@
+[app]
+tab = "dist/tab/index.html"
+
+[package]
+paths = ["dist"]

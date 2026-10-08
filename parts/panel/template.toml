@@ -1,0 +1,13 @@
+[template]
+part = "panel"
+description = "One layout panel, example: [[app.panels]]"
+
+# Without app-react, take its web/ scaffold, minus the tab, the tab's built dist/ and [app] tab.
+[template.borrow]
+part = "app-react"
+exclude = ["web/src/tab", "dist", "extension.toml.part"]
+
+[template.substitution]
+include = [
+  "extension.toml.part",
+]
