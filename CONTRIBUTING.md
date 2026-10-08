@@ -5,6 +5,7 @@
 - [Zelos CLI](https://release.zeloscloud.io) (`zelos` on PATH, or set `ZELOS_BIN`)
 - Python 3.11+ with [ruff](https://docs.astral.sh/ruff/)
 - Node.js 24 LTS with npm
+- [actionlint](https://github.com/rhysd/actionlint) (the smoke tests lint the rendered workflows)
 
 ## Quick reference
 
