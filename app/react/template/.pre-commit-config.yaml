@@ -8,26 +8,19 @@ repos:
       - id: check-yaml
       - id: check-json
         exclude: ^.devcontainer/devcontainer.json
-      - id: pretty-format-json
-        exclude: ^(.devcontainer/devcontainer.json|package-lock.json)
-        args: [--autofix, --no-sort-keys]
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: "v4.0.0-alpha.8"
+  # Prettier and ESLint run from node_modules, at the versions package.json locks.
+  - repo: local
     hooks:
       - id: prettier
-        additional_dependencies:
-          - prettier@3
-
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: "v9.27.0"
-    hooks:
+        name: prettier
+        entry: npx prettier --write --ignore-unknown
+        language: system
+        types: [text]
       - id: eslint
-        files: \.(ts|tsx)$
-        additional_dependencies:
-          - eslint@9
-          - typescript-eslint@8
-          - eslint-plugin-react-hooks@5
-          - "@eslint/js@9"
+        name: eslint
+        entry: npx eslint --fix
+        language: system
+        files: ^src/.*\.(ts|tsx)$
