@@ -105,6 +105,10 @@ smoke-agent:
       echo "  Or set:  ZELOS_BIN=/path/to/zelos just smoke-agent"
       exit 1
     fi
+    if ! command -v actionlint &>/dev/null; then
+      echo "Error: actionlint not found (https://github.com/rhysd/actionlint)"
+      exit 1
+    fi
 
     out=$(mktemp -d)
     trap "rm -rf $out" EXIT
@@ -113,6 +117,8 @@ smoke-agent:
     "{{zelos_bin}}" extensions create test-smoke-agent --type agent --no-setup --output "$out"
 
     cd "$out/test-smoke-agent"
+    echo "Linting generated workflows ..."
+    actionlint .github/workflows/*.yml
     echo "Locking dependencies as zelos extensions create does ..."
     uv sync
     echo "Installing from the lock as the generated CI does ..."
@@ -134,6 +140,10 @@ smoke-app:
       echo "  Or set:  ZELOS_BIN=/path/to/zelos just smoke-app"
       exit 1
     fi
+    if ! command -v actionlint &>/dev/null; then
+      echo "Error: actionlint not found (https://github.com/rhysd/actionlint)"
+      exit 1
+    fi
 
     out=$(mktemp -d)
     template_dir=$(mktemp -d)
@@ -145,6 +155,8 @@ smoke-app:
     ZELOS_EXTENSION_TEMPLATES_DIR="$template_dir" "{{zelos_bin}}" extensions create test-smoke-app --type app --no-setup --output "$out"
 
     cd "$out/test-smoke-app"
+    echo "Linting generated workflows ..."
+    actionlint .github/workflows/*.yml
     echo "Running generated project CI ..."
     just ci
 
