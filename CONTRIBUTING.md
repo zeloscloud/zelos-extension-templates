@@ -4,7 +4,7 @@
 
 - [Zelos CLI](https://release.zeloscloud.io) (`zelos` on PATH, or set `ZELOS_BIN`)
 - Python 3.11+ with [ruff](https://docs.astral.sh/ruff/)
-- Node.js 20.x with npm
+- Node.js 24 LTS with npm
 
 ## Quick reference
 

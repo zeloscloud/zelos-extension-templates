@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - [Zelos CLI](https://docs.zeloscloud.io/cli)
-- Node.js 20.x (see `.nvmrc`)
+- Node.js 24 LTS (see `.nvmrc`)
 - [just](https://github.com/casey/just)
 
 ## Commands
