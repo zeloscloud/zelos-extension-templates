@@ -65,14 +65,8 @@ jobs:
         env:
           INSTALLER_NO_MODIFY_PATH: 1
 
-      - name: Render agent template
-        run: zelos extensions create test-smoke-agent --type agent --no-setup --output /tmp
-        env:
-          ZELOS_EXTENSION_TEMPLATES_DIR: ${{ github.workspace }}
-
-      - name: Run CI checks on rendered project
-        working-directory: /tmp/test-smoke-agent
-        run: just ci
+      - name: Render the agent template and run its CI
+        run: just smoke-agent
 
   smoke-app:
     name: Smoke test app/react
@@ -96,14 +90,8 @@ jobs:
         env:
           INSTALLER_NO_MODIFY_PATH: 1
 
-      - name: Render app template
-        run: zelos extensions create test-smoke-app --type app --no-setup --output /tmp
-        env:
-          ZELOS_EXTENSION_TEMPLATES_DIR: ${{ github.workspace }}
-
-      - name: Run CI checks on rendered project
-        working-directory: /tmp/test-smoke-app
-        run: just ci
+      - name: Render the app template and run its CI
+        run: just smoke-app
 
   release:
     name: Create GitHub release
