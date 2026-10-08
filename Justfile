@@ -157,6 +157,9 @@ smoke-app:
     cd "$out/test-smoke-app"
     echo "Linting generated workflows ..."
     actionlint .github/workflows/*.yml
+    echo "Checking the shipped dist/ against a fresh build ..."
+    just install
+    just verify-dist
     echo "Running generated project CI ..."
     just ci
 

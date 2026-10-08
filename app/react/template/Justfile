@@ -34,6 +34,16 @@ check:
 build:
     npm run build
 
+# Rebuild dist/ and fail if it differs from the dist/ already there
+verify-dist:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    before=$(mktemp -d)
+    trap 'rm -rf "$before"' EXIT
+    cp -R dist/. "$before"
+    npm run build
+    diff -r "$before" dist || { echo "dist/ did not match the source; it is now rebuilt"; exit 1; }
+
 # Package for Zelos marketplace
 package:
     npm run build
