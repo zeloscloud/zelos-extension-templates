@@ -35,7 +35,7 @@ Issues = "{{ repository }}/issues"
 Documentation = "https://docs.zeloscloud.io/extensions"
 {% endif %}
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=9.1.1",
     "pre-commit>=4.6.2",
