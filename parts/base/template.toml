@@ -1,0 +1,35 @@
+[template]
+part = "base"
+description = "Manifest, README, license, Justfile and GitHub workflows shared by every project"
+
+[[template.variables]]
+name = "name"
+prompt = "Extension name (kebab-case)"
+pattern = "[a-z0-9][a-z0-9-]*[a-z0-9]"
+
+[[template.variables]]
+name = "description"
+prompt = "Short description of the extension"
+default = ""
+
+[[template.variables]]
+name = "author"
+prompt = "Author name"
+default = ""
+
+[[template.variables]]
+name = "email"
+prompt = "Author email"
+default = ""
+
+[[template.variables]]
+name = "github"
+prompt = "GitHub username or organization (for repository URLs)"
+default = ""
+
+[template.substitution]
+include = [
+  "extension.toml",
+  "README.md",
+  "LICENSE",
+]

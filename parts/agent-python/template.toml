@@ -1,0 +1,22 @@
+[template]
+part = "agent-python"
+description = "Python agent runtime: main.py, a Python package, pyproject.toml and [agent]"
+
+[[template.variables]]
+name = "python_version"
+prompt = "Python version (major.minor, e.g. 3.11)"
+default = "3.11"
+
+[template.substitution]
+include = [
+  "extension.toml.part",
+  ".python-version",
+  "pyproject.toml",
+  "main.py",
+  "extension/__init__.py",
+  "extension/extension.py",
+  "config.schema.json",
+]
+
+[template.substitution.dir_renames]
+extension = "{{ project_slug }}"

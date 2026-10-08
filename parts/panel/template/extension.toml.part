@@ -1,0 +1,16 @@
+[[app.panels]]
+id = "example"
+name = "Example Panel"
+description = "Latest value of each bound signal"
+# icon = "assets/example.svg"        # optional; list its directory in [package] paths
+entry = "dist/panels/example.html"
+accepts = []                         # event-type prefixes (e.g. "zelos.can.frame.") a drop routes to this panel
+affiliates = []                      # prefixes that ride along with an accepted drop
+binds = "any"                        # "any" or "accepted"
+default_height = 2
+live_only = false
+options_schema = "dist/panels/example.options.json"
+ai_guidance = "Shows the latest value of each bound signal, one row per signal."
+
+[package]
+paths = ["dist"]
