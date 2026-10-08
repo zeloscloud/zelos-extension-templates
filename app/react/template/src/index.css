@@ -26,24 +26,24 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-* {
-  margin: 0;
-  box-sizing: border-box;
-  border-color: hsl(var(--border));
-}
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 
-body {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  -webkit-font-smoothing: antialiased;
+  body {
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+  }
 }
