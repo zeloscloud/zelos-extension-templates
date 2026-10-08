@@ -70,6 +70,17 @@ ZELOS_TEMPLATE_OUTPUT_ROOT=/tmp just test-app-local my-app
 - Static files (no MiniJinja expressions) are copied as-is and do **not** need to be in the include list
 - Keep both templates consistent: same variable names, same Justfile recipe names, same CI structure
 
+### App template `dist/`
+
+The app template ships a prebuilt `dist/`, so a new project installs without a build. After changing the app template's source or dependencies, rebuild it in place and stage it with `-f`, because the template's own `.gitignore` ignores `dist/`:
+
+```bash
+cd app/react/template && npm ci && npm run build
+git add -f dist
+```
+
+`just smoke-app` fails when the committed `dist/` differs from a fresh build.
+
 ### Generated project Justfile contract
 
 Both templates expose the same top-level commands for extension developers:
