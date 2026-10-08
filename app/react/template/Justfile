@@ -2,40 +2,44 @@
 install:
     npm ci
 
+# Install dependencies only when node_modules is missing
+_deps:
+    [ -d node_modules ] || npm ci
+
 # Run development server
-dev:
+dev: _deps
     npm run dev
 
 # Format code (Prettier)
-format:
+format: _deps
     npm run format
 
 # Run tests
-test:
+test: _deps
     npm run test
 
 # Run tests in watch mode
-test-watch:
+test-watch: _deps
     npm run test:watch
 
 # Type-check
-tsc:
+tsc: _deps
     npm run tsc
 
 # Lint
-lint:
+lint: _deps
     npm run lint
 
 # Lint and type-check
-check:
+check: _deps
     npm run check
 
 # Build for production
-build:
+build: _deps
     npm run build
 
 # Rebuild dist/ and fail if it differs from the dist/ already there
-verify-dist:
+verify-dist: _deps
     #!/usr/bin/env bash
     set -euo pipefail
     before=$(mktemp -d)
@@ -45,7 +49,7 @@ verify-dist:
     diff -r "$before" dist || { echo "dist/ did not match the source; it is now rebuilt"; exit 1; }
 
 # Package for Zelos marketplace
-package:
+package: _deps
     npm run build
     npm run package
 
@@ -59,7 +63,7 @@ ci:
     npm run package
 
 # Release: bump version, check, build, commit, tag
-release VERSION:
+release VERSION: _deps
     #!/usr/bin/env bash
     set -eux -o pipefail
     git diff-index --quiet HEAD || (echo "Uncommitted changes! Commit or stash first." && exit 1)
