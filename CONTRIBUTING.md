@@ -11,7 +11,9 @@
 
 ```bash
 just fmt          # Format template source files
-just ci           # Run everything: validate, format-check, render + test both templates
+just smoke        # Test the parts renderer, render all five combinations of parts and run their CI
+just render-parts agent-python,panel /tmp/probe   # Render one combination of parts
+just ci           # Run everything: parts smoke, validate, format-check, render + test both templates
 just smoke-agent  # Render + test agent template only
 just smoke-app    # Render + test app template only
 just validate     # Fast structural check (no CLI needed)
@@ -61,6 +63,13 @@ Override the output location:
 ```bash
 ZELOS_TEMPLATE_OUTPUT_ROOT=/tmp just test-app-local my-app
 ```
+
+## Parts development
+
+- `scripts/render_parts.py` is the executable form of the merge rules in `parts/README.md`. Change both together; the CLI copies its behavior from them.
+- Add a file with `{{ }}` or `{% %}` expressions to the part's `include` list. Keep files without variables out of it, so `${{ }}` and Justfile `{{VERSION}}` need no `{% raw %}`.
+- A part never overwrites another part's file. Extend `extension.toml` with `extension.toml.part` and the `Justfile` with `Justfile.part`.
+- `just smoke` must pass; it also checks that the worked example in `parts/README.md` matches a real render. It needs uv, npm and actionlint. Before the app extension SDK version that `web/package.json` names is on npm, set `SDK_TGZ` to a tarball from `npm pack`; without it the web projects are rendered and checked, and their CI is skipped. Packaging runs when `ZELOS_BIN` (or `zelos`) has `extensions create --with`.
 
 ## Template development
 

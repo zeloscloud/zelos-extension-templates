@@ -1,0 +1,11 @@
+# Start the Vite dev server: /tab/ and /panels/<id>.html run against a mock host
+dev: _deps
+    (cd web && npm run dev)
+
+# Rebuild dist/ on every change, for a local install in Zelos
+watch: _deps
+    (cd web && npm run watch)
+
+# Run the web tests in watch mode
+test-watch: _deps
+    (cd web && npm run test:watch)
