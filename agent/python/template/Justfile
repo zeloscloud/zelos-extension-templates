@@ -6,7 +6,11 @@ default:
 # Install dependencies
 install:
     uv sync --extra dev
-    uv run pre-commit install
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+        uv run pre-commit install; \
+    else \
+        echo "Not a git repository: skipped the pre-commit hooks. Run git init, then just install."; \
+    fi
 
 # Install dependencies for CI (no pre-commit hooks)
 ci-install:
