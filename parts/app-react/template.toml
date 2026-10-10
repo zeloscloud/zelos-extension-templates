@@ -1,0 +1,11 @@
+[template]
+part = "app-react"
+description = "React + Vite web project under web/ with one tab: [app] tab"
+
+[template.substitution]
+# dist/ ships prebuilt; only the tab document's title is rendered, never the hashed assets.
+include = [
+  "web/package.json",
+  "web/src/tab/index.html",
+  "dist/tab/index.html",
+]

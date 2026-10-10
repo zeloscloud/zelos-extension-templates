@@ -1,0 +1,7 @@
+# Run the agent runtime locally
+run:
+    uv run python main.py
+
+# Update uv.lock after changing dependencies
+lock:
+    uv lock

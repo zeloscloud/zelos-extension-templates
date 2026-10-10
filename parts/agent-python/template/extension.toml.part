@@ -1,0 +1,10 @@
+[config]
+schema = "config.schema.json"
+
+[agent]
+runtime = "python"
+entry = "main.py"
+python_version = "{{ python_version }}"
+
+[package]
+paths = ["main.py", "{{ project_slug }}"]

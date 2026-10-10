@@ -1,0 +1,19 @@
+name = "{{ name | replace('-', ' ') | title }}"
+version = "0.1.0"
+{% if description %}
+description = "{{ description | toml_escape }}"
+{% endif %}
+{% if author %}
+author = "{{ author | toml_escape }}"
+{% endif %}
+{% if repository %}
+repository = "{{ repository }}"
+{% endif %}
+icon = "assets/icon.svg"
+readme = "README.md"
+
+[zelos]
+version = ">=26.0.10"
+
+[package]
+paths = []

@@ -32,6 +32,8 @@ jobs:
           pip install -q ruff
           ruff format --isolated --no-respect-gitignore --check agent/python/template/tests/
           ruff check --isolated --no-respect-gitignore agent/python/template/tests/
+          ruff format --isolated --target-version py311 --no-respect-gitignore --check scripts/ parts/agent-python/template/tests/
+          ruff check --isolated --target-version py311 --no-respect-gitignore scripts/ parts/agent-python/template/tests/
 
       - uses: actions/setup-node@v7
         with:
@@ -40,6 +42,48 @@ jobs:
       - name: Check React template source formatting
         working-directory: app/react/template
         run: npx -y prettier@3 --check src/
+
+      - name: Check parts web source formatting
+        run: npx -y prettier@3 --check "parts/**/*.{ts,tsx,css,mjs}"
+
+  smoke-parts:
+    name: Smoke test template parts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: parts/app-react/template/web/.nvmrc
+
+      - uses: extractions/setup-just@v4
+
+      - name: Install Zelos CLI
+        run: |
+          curl -fsSL https://release.zeloscloud.io/cli/install.sh | bash
+          echo "$HOME/.zelos/bin" >> "$GITHUB_PATH"
+        env:
+          INSTALLER_NO_MODIFY_PATH: 1
+
+      - name: Install actionlint
+        run: |
+          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz -C "$RUNNER_TEMP" actionlint
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Render every combination of parts and run its CI
+        run: just smoke
+
+      - name: Check the shipped dist of each web part against its source
+        run: just verify-dist
 
   smoke-agent:
     name: Smoke test agent/python
@@ -106,11 +150,14 @@ jobs:
   release:
     name: Create GitHub release
     runs-on: ubuntu-latest
-    needs: [validate, smoke-agent, smoke-app]
+    needs: [validate, smoke-agent, smoke-app, smoke-parts]
     steps:
       - uses: actions/checkout@v7
 
+      - name: Archive template parts
+        run: tar -czf parts.tar.gz parts
+
       - name: Create release
-        run: gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes
+        run: gh release create "${{ github.ref_name }}" parts.tar.gz --title "${{ github.ref_name }}" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
