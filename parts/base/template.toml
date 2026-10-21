@@ -32,4 +32,5 @@ include = [
   "extension.toml",
   "README.md",
   "LICENSE",
+  ".github/dependabot.yml",
 ]

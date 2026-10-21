@@ -29,6 +29,15 @@ LEGACY_TOP_LEVEL = ("host", "runtime", "workdir", "targets", "env", "stop")
 PANEL_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 ASSET_REF_RE = re.compile(r'(?:src|href)="(\.{1,2}/[^"]+)"')
 SKIP_DIRS = {"node_modules", ".git", ".venv"}
+# What each Dependabot ecosystem reads in its directory; a directory without it fails every run.
+DEPENDABOT_MANIFESTS = {
+    "uv": "pyproject.toml",
+    "npm": "package.json",
+    "github-actions": ".github/workflows",
+}
+DEPENDABOT_ENTRY_RE = re.compile(
+    r'-\s+package-ecosystem:\s*"?([\w-]+)"?\s*\n\s+directory:\s*"?([^"\n]+)"?'
+)
 
 
 def _covered(path: str, package_paths: list[str]) -> bool:
@@ -54,6 +63,7 @@ def check(project: Path, expect: set[str]) -> list[str]:
         *_check_panels(project, package_paths, panels),
         *_check_web(project, has),
         *_check_files(project),
+        *_check_dependabot(project, has),
         *_check_justfile(project),
     ]
 
@@ -183,6 +193,39 @@ def _check_files(project: Path) -> list[str]:
                 tomllib.loads(path.read_text())
         except (ValueError, tomllib.TOMLDecodeError) as error:
             errors.append(f"{relative}: does not parse: {error}")
+    return errors
+
+
+def _check_dependabot(project: Path, has: dict[str, bool]) -> list[str]:
+    """Dependabot watches exactly what the project has: a directory without its manifest fails
+    every scheduled run, and an ecosystem the project uses must be watched."""
+    path = project / ".github/dependabot.yml"
+    if not path.is_file():
+        return [".github/dependabot.yml: missing"]
+    text = path.read_text()
+    errors = []
+    if "labels:" in text:
+        errors.append(
+            ".github/dependabot.yml: a label the repository may not have makes every run warn"
+        )
+    entries = DEPENDABOT_ENTRY_RE.findall(text)
+    for ecosystem, directory in entries:
+        manifest = DEPENDABOT_MANIFESTS.get(ecosystem)
+        if manifest is None:
+            errors.append(f".github/dependabot.yml: unknown ecosystem {ecosystem!r}")
+            continue
+        if not (project / directory.strip("/") / manifest).exists():
+            errors.append(
+                f".github/dependabot.yml: {ecosystem} in {directory} has no {manifest}"
+            )
+    watched = {ecosystem for ecosystem, _ in entries}
+    wanted = {"github-actions"}
+    if (project / "pyproject.toml").is_file():
+        wanted.add("uv")
+    if has["tab"] or has["panel"]:
+        wanted.add("npm")
+    for ecosystem in sorted(wanted - watched):
+        errors.append(f".github/dependabot.yml: {ecosystem} is not watched")
     return errors
 
 

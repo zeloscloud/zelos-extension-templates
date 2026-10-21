@@ -1,5 +1,6 @@
 version: 2
 updates:
+{% if with_agent %}
   # Agent runtime: pyproject.toml and uv.lock
   - package-ecosystem: "uv"
     directory: "/"
@@ -10,9 +11,9 @@ updates:
       dependencies:
         patterns:
           - "*"
-    labels:
-      - "dependencies"
 
+{% endif %}
+{% if with_tab or with_panel %}
   # Web project: web/package.json and web/package-lock.json
   - package-ecosystem: "npm"
     directory: "/web"
@@ -23,9 +24,8 @@ updates:
       dependencies:
         patterns:
           - "*"
-    labels:
-      - "dependencies"
 
+{% endif %}
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -36,5 +36,3 @@ updates:
       dependencies:
         patterns:
           - "*"
-    labels:
-      - "dependencies"
