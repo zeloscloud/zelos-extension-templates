@@ -7,7 +7,6 @@ updates:
     groups:
       all:
         patterns: ["*"]
-    labels: ["dependencies"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -15,4 +14,3 @@ updates:
     groups:
       all:
         patterns: ["*"]
-    labels: ["dependencies"]

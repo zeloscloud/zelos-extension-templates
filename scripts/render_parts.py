@@ -28,6 +28,12 @@ PARTS_DIR = Path(__file__).resolve().parent.parent / "parts"
 # T1: parts always render in this order, whatever order the caller gives.
 PART_ORDER = ("base", "agent-python", "app-react", "panel")
 ALWAYS = "base"
+# What a selected part sets, so a file every project shares can follow the selection.
+SELECTION_FLAGS = {
+    "agent-python": "with_agent",
+    "app-react": "with_tab",
+    "panel": "with_panel",
+}
 
 # T2/T3: a fragment `<target>.part` at a part's root extends `<target>`.
 FRAGMENT_TARGETS = ("extension.toml", "Justfile")
@@ -378,8 +384,13 @@ def load_part(parts_dir: Path, name: str) -> Part:
     )
 
 
-def resolve_variables(parts: list[Part], given: dict[str, str]) -> dict[str, str]:
-    """Defaults, validation, empty stripping and derived values, as the CLI does."""
+def resolve_variables(
+    parts: list[Part], given: dict[str, str], selected: set[str]
+) -> dict[str, str]:
+    """Defaults, validation, empty stripping and derived values, as the CLI does.
+
+    `selected` is the parts the caller chose; a part rendered only through a borrow is not in it.
+    """
     values = dict(given)
     declared: dict[str, dict] = {}
     for part in parts:
@@ -402,6 +413,10 @@ def resolve_variables(parts: list[Part], given: dict[str, str]) -> dict[str, str
     values["project_slug"] = values["name"].lower().replace("-", "_")
     if "github" in values:
         values["repository"] = f"https://github.com/{values['github']}/{values['name']}"
+    for part, flag in SELECTION_FLAGS.items():
+        values.pop(flag, None)
+        if part in selected:
+            values[flag] = "true"
     return values
 
 
@@ -671,7 +686,7 @@ def render_parts(
 
     parts = [load_part(parts_dir, name) for name in ordered]
     units = plan_units(parts, parts_dir, selected)
-    variables = resolve_variables([unit.source for unit in units], given)
+    variables = resolve_variables([unit.source for unit in units], given, selected)
 
     if out.exists() and any(out.iterdir()):
         raise RenderError(f"output directory is not empty: {out}")

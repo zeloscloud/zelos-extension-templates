@@ -52,6 +52,12 @@ Two values are derived from these. `project_slug` is `name` in lowercase with `-
 `_`; it names the Python package and the trace source. `repository` is
 `https://github.com/<github>/<name>` when `github` is set.
 
+Three more say what the caller chose: `with_agent`, `with_tab` and `with_panel` are `true` when
+`agent-python`, `app-react` or `panel` is selected, and absent otherwise. A part rendered only
+through a borrow does not set its flag, and a value given for a flag is ignored. They are for the
+few files `base` owns that cannot follow the files on disk, such as `.github/dependabot.yml`:
+`{% if with_tab or with_panel %}` holds exactly when the project has `web/`.
+
 ## Layout of a part
 
 ```
@@ -156,7 +162,10 @@ distinct names only: `agent-python` adds `run` and `lock`, `app-react` adds `dev
 
 Only one part can produce a file, so `base` owns every file that all projects share:
 `.pre-commit-config.yaml` (ruff hooks for Python files, Prettier and ESLint hooks for `web/`),
-`.github/dependabot.yml` (uv at `/`, npm at `/web`, GitHub Actions) and `.vscode/`.
+`.github/dependabot.yml` and `.vscode/`. The Dependabot file watches GitHub Actions always, uv at
+`/` with `with_agent` and npm at `/web` with `with_tab` or `with_panel`: Dependabot fails every
+scheduled run for a directory without its manifest. It sets no labels, since a label the
+repository lacks makes every run report an error.
 
 ### The web scaffold
 

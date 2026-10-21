@@ -13,6 +13,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from check_project import check
 from render_parts import (
     Fragment,
     RenderError,
@@ -348,6 +349,80 @@ class RealPartsTest(unittest.TestCase):
                         b"<title>Probe</title>",
                         (out / "dist/tab/index.html").read_bytes(),
                     )
+
+    def test_dependabot_watches_exactly_what_each_combination_has(self) -> None:
+        cases = (
+            (["agent-python"], {"agent"}, ["uv", "github-actions"]),
+            (["app-react"], {"tab"}, ["npm", "github-actions"]),
+            (["panel"], {"panel"}, ["npm", "github-actions"]),
+            (
+                ["agent-python", "panel"],
+                {"agent", "panel"},
+                ["uv", "npm", "github-actions"],
+            ),
+            (
+                ["agent-python", "app-react", "panel"],
+                {"agent", "tab", "panel"},
+                ["uv", "npm", "github-actions"],
+            ),
+        )
+        for parts, expect, ecosystems in cases:
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "probe"
+                render_parts(parts, out, dict(WORKED_EXAMPLE_VARS))
+                text = (out / ".github/dependabot.yml").read_bytes().decode()
+                found = re.findall(r'package-ecosystem: "([\w-]+)"', text)
+                self.assertEqual(found, ecosystems, parts)
+                self.assertNotIn("labels", text, parts)
+                self.assertNotIn("{%", text, parts)
+                self.assertEqual(check(out, expect), [], parts)
+
+    def test_selection_flags_follow_the_choice_not_a_borrow(self) -> None:
+        """A panel without the tab renders the tab's scaffold by borrowing; the flags still say
+        what was chosen, and a value given for a flag never overrides the selection."""
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "probe"
+            given = dict(WORKED_EXAMPLE_VARS, with_tab="true", with_agent="true")
+            labels = render_parts(["panel"], out, given)
+            self.assertIn("panel (from app-react)", labels)
+            text = (out / ".github/dependabot.yml").read_bytes().decode()
+            self.assertNotIn('"uv"', text)
+            self.assertIn('"npm"', text)
+
+
+class CheckProjectTest(unittest.TestCase):
+    def test_a_dependabot_directory_without_its_manifest_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "probe"
+            render_parts(["agent-python"], out, dict(WORKED_EXAMPLE_VARS))
+            path = out / ".github/dependabot.yml"
+            text = path.read_bytes().decode()
+            path.write_bytes(
+                text.replace(
+                    "  # GitHub Actions\n",
+                    '  - package-ecosystem: "npm"\n    directory: "/web"\n'
+                    '    labels:\n      - "dependencies"\n\n  # GitHub Actions\n',
+                ).encode()
+            )
+            errors = check(out, {"agent"})
+            self.assertIn(
+                ".github/dependabot.yml: npm in /web has no package.json", errors
+            )
+            self.assertTrue(any("label" in e for e in errors), errors)
+
+    def test_an_ecosystem_the_project_uses_must_be_watched(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "probe"
+            render_parts(["agent-python", "panel"], out, dict(WORKED_EXAMPLE_VARS))
+            path = out / ".github/dependabot.yml"
+            text = path.read_bytes().decode()
+            start = text.index("  # Web project")
+            end = text.index("  # GitHub Actions")
+            path.write_bytes((text[:start] + text[end:]).encode())
+            self.assertEqual(
+                check(out, {"agent", "panel"}),
+                [".github/dependabot.yml: npm is not watched"],
+            )
 
 
 if __name__ == "__main__":
