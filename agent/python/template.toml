@@ -41,6 +41,7 @@ include = [
   "main.py",
   "extension/__init__.py",
   "extension/extension.py",
+  "tests/test_extension.py",
   "config.schema.json",
   "LICENSE",
   ".github/workflows/CI.yml",

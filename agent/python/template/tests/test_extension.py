@@ -4,6 +4,11 @@ This file demonstrates the checker operators and the Python-predicate form.
 Users can run these tests to see the "checkerboard" output format.
 """
 
+import inspect
+from importlib import import_module
+
+SensorMonitor = import_module("{{ project_slug }}").SensorMonitor
+
 
 def test_checker_equality(check) -> None:
     """Equality and inequality operators."""
@@ -74,3 +79,17 @@ def test_checker_attributes(check) -> None:
     obj = Example()
     check.that(hasattr(obj, "value"))
     check.that(hasattr("hello", "upper"))
+
+
+def test_action_flags() -> None:
+    """Pins each action's flags, so a new action or a changed flag is a deliberate choice."""
+    flags = {
+        name: (member._action.read_only, member._action.hidden)
+        for name, member in inspect.getmembers(SensorMonitor)
+        if hasattr(member, "_action")
+    }
+
+    assert flags == {
+        "set_interval": (False, False),
+        "get_status": (True, True),
+    }
