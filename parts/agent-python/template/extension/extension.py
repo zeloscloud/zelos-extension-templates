@@ -105,7 +105,7 @@ class SensorMonitor:
         self.config["interval"] = seconds
         return {"message": f"Interval set to {seconds}s", "interval": seconds}
 
-    @zelos_sdk.action("Get Status", "Get current sensor status")
+    @zelos_sdk.action("Get Status", "Get current sensor status", read_only=True, hidden=True)
     def get_status(self) -> dict[str, Any]:
         """Get current sensor status.
 

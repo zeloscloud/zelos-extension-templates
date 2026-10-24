@@ -1,5 +1,6 @@
 """Tests of the {{ name }} agent runtime. No running Zelos agent is needed."""
 
+import inspect
 import time
 
 import pytest
@@ -35,3 +36,17 @@ def test_run_logs_one_sample(monkeypatch: pytest.MonkeyPatch) -> None:
     status = monitor.get_status()
     assert 15.0 <= status["temperature"] <= 25.0
     assert status["status"] == "OK"
+
+
+def test_action_flags() -> None:
+    """Pins each action's flags, so a new action or a changed flag is a deliberate choice."""
+    flags = {
+        name: (member._action.read_only, member._action.hidden)
+        for name, member in inspect.getmembers(SensorMonitor)
+        if hasattr(member, "_action")
+    }
+
+    assert flags == {
+        "set_interval": (False, False),
+        "get_status": (True, True),
+    }
