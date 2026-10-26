@@ -92,5 +92,5 @@ delete-release VERSION:
 
 # Remove build output, caches and packages
 clean:
-    rm -rf dist build web/node_modules .pytest_cache .ruff_cache *.tar.gz
+    rm -rf dist build web/node_modules .pytest_cache .ruff_cache *.tar.gz actions.json
     find . -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
