@@ -32,7 +32,7 @@ dependencies = [
 Homepage = "{{ repository }}"
 Repository = "{{ repository }}"
 Issues = "{{ repository }}/issues"
-Documentation = "https://docs.zeloscloud.io/extensions"
+Documentation = "https://docs.zeloscloud.io/latest/app/extensions/"
 {% endif %}
 
 [dependency-groups]
