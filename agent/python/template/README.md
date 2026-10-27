@@ -10,7 +10,7 @@
 - [Repository]({{ repository }})
 - [Issues]({{ repository }}/issues)
 - [Zelos Documentation](https://docs.zeloscloud.io)
-- [SDK Guide](https://docs.zeloscloud.io/sdk)
+- [SDK Guide](https://docs.zeloscloud.io/latest/sdk/)
 {% endif %}
 
 ## License

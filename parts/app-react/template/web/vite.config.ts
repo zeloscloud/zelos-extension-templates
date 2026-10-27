@@ -24,7 +24,7 @@ function documents(): Record<string, string> {
 
 export default defineConfig({
   root: src,
-  // Relative asset URLs, so documents load from zelos-app://<id>/<entry>.
+  // Relative asset URLs, so documents load from zelos-app://<id>/~<version>/<entry>.
   base: "./",
   // Copied as-is into dist/, e.g. public/panels/<id>.options.json.
   publicDir: resolve(import.meta.dirname, "public"),

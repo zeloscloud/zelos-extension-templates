@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- [Zelos CLI](https://docs.zeloscloud.io/cli)
+- [Zelos CLI](https://docs.zeloscloud.io/latest/getting-started/install-cli/)
 - Python {{ python_version }}+
 - [uv](https://docs.astral.sh/uv/)
 - [just](https://github.com/casey/just)
