@@ -228,6 +228,9 @@ version = "0.1.0"
 description = "Probe sensors"
 author = "Ada Lovelace"
 repository = "https://github.com/your-org/probe"
+# The marketplace search and Zelos AI find an extension by these words, its name and its description.
+keywords = []
+categories = []
 icon = "assets/icon.svg"
 readme = "README.md"
 

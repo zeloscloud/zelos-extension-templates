@@ -9,6 +9,9 @@ author = "{{ author | toml_escape }}"
 {% if repository %}
 repository = "{{ repository }}"
 {% endif %}
+# The marketplace search and Zelos AI find an extension by these words, its name and its description.
+keywords = []
+categories = []
 icon = "assets/icon.svg"
 readme = "README.md"
 
