@@ -2,7 +2,8 @@
 
 ## Prerequisites
 
-- [Zelos CLI](https://docs.zeloscloud.io/reference/cli/)
+- [Zelos](https://zeloscloud.io) 26.0.10 or later
+- [Zelos CLI](https://docs.zeloscloud.io/reference/cli/) 0.1.11 or later
 - [just](https://github.com/casey/just)
 - [uv](https://docs.astral.sh/uv/), when the project has an agent runtime (`pyproject.toml`)
 - Node.js 24 LTS (see `web/.nvmrc`), when the project has a web project (`web/package.json`)
@@ -17,9 +18,9 @@
 | Tab | `web/src/tab/` | `[app] tab` |
 | Panels | `web/src/panels/<id>.html`, `web/src/panels/<id>/` | `[[app.panels]]` |
 
-The web project builds every tab and panel document into `dist/` at the project root. A new
-project ships this `dist/` prebuilt, so it installs in Zelos before its first build; the first
-`just build` (`npm run build`) replaces it.
+The web project builds every tab and panel document into `dist/` at the project root with
+`just build` (`npm run build`). `.gitignore` keeps `dist/` out of the repository, so a fresh clone
+has none until its first build.
 
 ## Commands
 
@@ -46,10 +47,14 @@ just build
 zelos extensions install-local .
 ```
 
-A local install reads your project directory on every request. After a rebuild, reload the
-tab or the panel to see the change; you do not need to install again. With a web project, keep
-`just watch` running to rebuild on every save, and use `just dev` to work on a tab or panel in
-the browser against the mock host of the SDK.
+A local install runs from your project directory, so you do not install again after a code
+change:
+
+- Tab or panel: after a rebuild, reload the tab or the panel. Keep `just watch` running to rebuild
+  on every save, and use `just dev` to work on it in the browser against the mock host of the SDK.
+- Agent runtime: stop and start the extension. After a dependency change, stop it and run
+  `zelos extensions reinstall <id>`.
+- `extension.toml`: run `zelos extensions install-local .` again.
 
 ## Packaging
 
@@ -57,8 +62,11 @@ the browser against the mock host of the SDK.
 just package
 ```
 
-The archive lands next to `extension.toml` as `{name}-{version}.tar.gz`. It contains the
-paths listed in `[package] paths`.
+The archive lands next to `extension.toml` as `<name>-<version>.tar.gz`, where `<name>` is the
+manifest name in lowercase with every other run of characters turned into one hyphen. It holds
+`extension.toml`, the README, the icon, the config schema and the paths listed in
+`[package] paths`. With an agent runtime it also holds `pyproject.toml`, `uv.lock` and
+`actions.json`, the list of actions that run while the extension is stopped.
 
 ## Release
 
