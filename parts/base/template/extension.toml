@@ -9,7 +9,8 @@ author = "{{ author | toml_escape }}"
 {% if repository %}
 repository = "{{ repository }}"
 {% endif %}
-# The marketplace search and Zelos AI find an extension by these words, its name and its description.
+# At most 20 keywords and 10 categories. Marketplace search matches both, the name, description,
+# author and repository. Zelos AI sees the name, description and keywords, not the categories.
 keywords = []
 categories = []
 icon = "assets/icon.svg"
@@ -19,4 +20,4 @@ readme = "README.md"
 version = ">=26.0.10"
 
 [package]
-paths = []
+paths = ["LICENSE"]
