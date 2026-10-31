@@ -41,7 +41,7 @@ just smoke                                        # five combinations, checked a
 
 | Variable | Declared by | Default | Use |
 | -------- | ----------- | ------- | --- |
-| `name` | `base` | required | The project name in kebab-case, e.g. `my-extension`. The manifest `name` is its title case, `My Extension`. |
+| `name` | `base` | required | The project name in kebab-case, e.g. `my-extension`: it starts with a letter, and single hyphens join its words, so its slug names an importable Python package. The manifest `name` is its title case, `My Extension`. |
 | `description` | `base` | empty | The description in the manifest, README, `pyproject.toml`, `web/package.json` and the configuration schema. |
 | `author` | `base` | empty | The manifest author, the license holder and the package authors. |
 | `email` | `base` | empty | The author email in `pyproject.toml`. |
