@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Entry point of the {{ name }} agent runtime."""
 
 import logging
@@ -18,16 +17,15 @@ if __name__ == "__main__":
     # Configure logging before SDK initialization
     logging.basicConfig(level=logging.INFO)
 
-    # Actions register under the manifest name, which the app and the packager address them by
+    # The name must equal `name` in extension.toml: the app and the packager address actions by it
     zelos_sdk.init(name="{{ name | replace('-', ' ') | title }}", actions=True)
-
-    # Add trace logging handler to send logs to Zelos
-    handler = TraceLoggingHandler("{{ project_slug }}_logger")
-    logging.getLogger().addHandler(handler)
 
     # Load configuration and create sensor monitor
     config = load_config()
     monitor = SensorMonitor(config)
+
+    # Send logs to Zelos as a log event of the sensor's own trace source
+    logging.getLogger().addHandler(TraceLoggingHandler(monitor.source))
 
     # Register interactive actions for the Zelos App
     zelos_sdk.actions_registry.register(monitor)
