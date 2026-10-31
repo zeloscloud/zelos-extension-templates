@@ -2,12 +2,8 @@
 __pycache__/
 *.py[cod]
 .venv/
-build/
-*.egg-info/
 .pytest_cache/
 .ruff_cache/
-.coverage
-htmlcov/
 
 # Node
 node_modules/
@@ -27,5 +23,4 @@ actions.json
 .envrc
 
 # Zelos
-.last_config
 config.json
