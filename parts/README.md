@@ -211,6 +211,8 @@ combination. Their steps depend on files, not on the parts that were selected:
 - The Node setup runs when `web/package.json` exists: `if: hashFiles('web/package.json') != ''`.
 - The install, check, test and package steps run the shared `just` recipes, which act on what
   exists. One `zelos extensions package .` packages everything.
+- Both workflows install the Zelos CLI and package the project, so a manifest, `[package]` or
+  action inventory error fails CI on the push, not the release on the tag.
 
 A project that adds a part by hand later keeps working without a workflow change.
 
