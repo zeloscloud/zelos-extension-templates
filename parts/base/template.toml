@@ -4,7 +4,7 @@ description = "Manifest, README, license, Justfile and GitHub workflows shared b
 
 [[template.variables]]
 name = "name"
-pattern = "[a-z0-9][a-z0-9-]*[a-z0-9]"
+pattern = "[a-z][a-z0-9]*(-[a-z0-9]+)*"
 
 [[template.variables]]
 name = "description"

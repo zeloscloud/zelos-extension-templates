@@ -297,6 +297,18 @@ class RealPartsTest(unittest.TestCase):
             )
             self.assertEqual((out / "extension.toml").read_text(), match.group(1))
 
+    def test_the_name_must_make_an_importable_package(self) -> None:
+        # The slug names the Python package; a leading digit or a doubled hyphen breaks it.
+        for bad in ("2fast", "my--ext", "-ext", "ext-", "Ext"):
+            with (
+                self.subTest(bad),
+                tempfile.TemporaryDirectory() as tmp,
+                self.assertRaisesRegex(RenderError, "does not match required pattern"),
+            ):
+                render_parts(["base"], Path(tmp) / "p", {"name": bad})
+        with tempfile.TemporaryDirectory() as tmp:
+            render_parts(["base"], Path(tmp) / "p", {"name": "probe-2"})
+
     def test_actions_register_under_the_manifest_name(self) -> None:
         # The app resolves an extension's actions by the manifest name, and packaging
         # inventories them under it, so the SDK must init under the same name.
