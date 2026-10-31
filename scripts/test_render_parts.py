@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -295,6 +296,19 @@ class RealPartsTest(unittest.TestCase):
                 ["base", "agent-python", "panel"], out, dict(WORKED_EXAMPLE_VARS)
             )
             self.assertEqual((out / "extension.toml").read_text(), match.group(1))
+
+    def test_actions_register_under_the_manifest_name(self) -> None:
+        # The app resolves an extension's actions by the manifest name, and packaging
+        # inventories them under it, so the SDK must init under the same name.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "probe"
+            render_parts(["base", "agent-python"], out, {"name": "probe-sensor"})
+            manifest = tomllib.loads((out / "extension.toml").read_text())
+            init = re.search(
+                r'zelos_sdk\.init\(name="([^"]*)"', (out / "main.py").read_text()
+            )
+            assert init, "main.py does not call zelos_sdk.init(name=...)"
+            self.assertEqual(init.group(1), manifest["name"])
 
     def test_output_bytes_match_the_sources_on_every_os(self) -> None:
         # Text mode writes CRLF on Windows; the renderer must not use it.
