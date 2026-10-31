@@ -6,6 +6,7 @@ Run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
 from __future__ import annotations
 
+import json
 import re
 import tempfile
 import textwrap
@@ -375,6 +376,27 @@ class RealPartsTest(unittest.TestCase):
                         b"<title>Probe</title>",
                         (out / "dist/tab/index.html").read_bytes(),
                     )
+
+    def test_web_projects_ship_the_lockfile_of_their_package_json(self) -> None:
+        # npm install rewrites a lockfile whose root package differs from package.json.
+        keys = ("name", "version", "dependencies", "devDependencies", "engines")
+        for parts in (
+            ["app-react"],
+            ["panel"],
+            ["agent-python", "panel"],
+            ["agent-python", "app-react", "panel"],
+        ):
+            with self.subTest(parts), tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "probe-sensor"
+                render_parts(parts, out, dict(WORKED_EXAMPLE_VARS, name="probe-sensor"))
+                package = json.loads((out / "web/package.json").read_bytes())
+                lock = json.loads((out / "web/package-lock.json").read_bytes())
+                self.assertEqual(lock["name"], package["name"])
+                self.assertEqual(lock["version"], package["version"])
+                self.assertEqual(
+                    {key: lock["packages"][""].get(key) for key in keys},
+                    {key: package.get(key) for key in keys},
+                )
 
     def test_dependabot_watches_exactly_what_each_combination_has(self) -> None:
         cases = (

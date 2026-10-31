@@ -175,18 +175,19 @@ smoke:
       echo "✓ All five combinations of parts passed, each with its own CI"
     fi
 
-# Rebuild each web part alone and compare with the dist/ it ships; a stale dist/ is rebuilt in place
+# Install and rebuild each web part alone, and compare with the lockfile and dist/ it ships; a stale one is rewritten in place
 verify-dist:
     #!/usr/bin/env bash
     set -eu -o pipefail
     sdk=$(just _sdk)
     if [[ -z "$sdk" ]]; then
       echo "Warning: the app extension SDK is not on npm at the range web/package.json names, and SDK_TGZ is not set."
-      echo "  Skipped the check of the shipped dist/: nothing to build it with."
+      echo "  Skipped the check of the shipped lockfile and dist/: nothing to install or build them with."
       exit 0
     fi
     out=$(mktemp -d)
     trap 'rm -rf "$out"' EXIT
+    lock=parts/app-react/template/web/package-lock.json
     stale=()
     for part in app-react panel; do
       echo "== $part"
@@ -194,9 +195,24 @@ verify-dist:
       python3 scripts/render_parts.py --parts "base,$part" --out "$project" --var name=probe
       cp -R "$project/dist" "$out/$part/shipped"
       if [[ $sdk == npm ]]; then
+        cp "$project/web/package-lock.json" "$out/$part/shipped-lock.json"
         (cd "$project/web" && npm install --no-audit --no-fund)
+        if cmp -s "$out/$part/shipped-lock.json" "$project/web/package-lock.json"; then
+          echo "  ✓ $lock is what npm install writes"
+        else
+          stale+=("$lock")
+          # npm writes the package name twice; the part renders it.
+          python3 - "$project/web/package-lock.json" "$lock" <<'EOF'
+    import pathlib, sys
+    built, part = map(pathlib.Path, sys.argv[1:])
+    text = built.read_bytes().decode().replace('"name": "probe",', '"name": "{{{{ name }}",')
+    assert text.count('"name": "{{{{ name }}",') == 2, f"{built}: the package name is not written twice"
+    part.write_bytes(text.encode())
+    EOF
+        fi
       else
         (cd "$project/web" && npm install --no-audit --no-fund --no-save "$sdk")
+        echo "  - skipped the check of $lock: SDK_TGZ replaces the SDK it locks"
       fi
       (cd "$project/web" && npm run build)
       if diff -r "$out/$part/shipped" "$project/dist"; then
@@ -221,12 +237,12 @@ verify-dist:
     done
     if [[ ${#stale[@]} -gt 0 ]]; then
       echo ""
-      echo "✗ ${stale[*]} did not match the source; it is now rebuilt."
+      echo "✗ ${stale[*]} did not match the source; it is now rewritten."
       echo "  Commit it with: git add -f -A ${stale[*]}"
       exit 1
     fi
     echo ""
-    echo "✓ The shipped dist/ of each web part matches its source"
+    echo "✓ The shipped files of each web part match their source"
 
 # Render + test agent/python template
 smoke-agent:

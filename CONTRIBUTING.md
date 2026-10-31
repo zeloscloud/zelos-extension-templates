@@ -13,7 +13,7 @@
 just fmt          # Format the scripts and the template sources
 just smoke        # Test the parts renderer, render all five combinations of parts and run their CI
 just render-parts agent-python,panel /tmp/probe   # Render one combination of parts
-just verify-dist  # Rebuild each web part and compare it with the dist/ it ships
+just verify-dist  # Install and rebuild each web part, and compare it with the lockfile and dist/ it ships
 just validate     # Check the structure of the whole-project templates (no CLI needed)
 just ci           # Run everything: smoke, verify-dist, validate, format check, smoke-agent, smoke-app
 ```
@@ -32,7 +32,7 @@ ZELOS_BIN=~/path/to/src/api/rs/target/debug/zelos just ci
 - Add a file with `{{ }}` or `{% %}` expressions to the part's `include` list. Keep files without variables out of it, so `${{ }}` and Justfile `{{VERSION}}` need no `{% raw %}`.
 - A part never overwrites another part's file. Extend `extension.toml` with `extension.toml.part` and the `Justfile` with `Justfile.part`.
 - `just smoke` must pass; it also checks that the worked example in `parts/README.md` matches a real render. It needs uv, npm and actionlint. Before the app extension SDK version that `web/package.json` names is on npm, set `SDK_TGZ` to a tarball from `npm pack`; without it the web projects are rendered and checked, and their CI is skipped. It needs a Zelos CLI with `extensions create --with` (`zelos`, or `ZELOS_BIN`): packaging each project runs the CLI's manifest validator.
-- After a change to a web part's source or dependencies, run `just verify-dist`. It rebuilds a stale `dist/` in place; commit it with `git add -f`, because `.gitignore` ignores `dist/`.
+- After a change to a web part's source or dependencies, run `just verify-dist`. It rewrites a stale `parts/app-react/template/web/package-lock.json` and a stale `dist/` in place; commit both, `dist/` with `git add -f`, because `.gitignore` ignores `dist/`. A dependency change to `web/package.json` without the lockfile fails the renderer's tests.
 
 ### Generated project Justfile contract
 
@@ -70,7 +70,7 @@ Template repo tags are independent of the CLI version.
 When the web parts must align with a **new published** SDK:
 
 1. **Publish** `@zeloscloud/app-extension-sdk` to npm
-2. **Update** `parts/app-react/template/web/package.json` to the published semver range, and run `just verify-dist`
+2. **Update** `parts/app-react/template/web/package.json` to the published semver range, and run `just verify-dist` to update the lockfile and `dist/`
 3. **Push** and **tag** a template release
 
 ## Pull requests
