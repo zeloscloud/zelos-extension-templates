@@ -1,6 +1,11 @@
 """Tests of the {{ name }} agent runtime. No running Zelos agent is needed."""
 
+import json
+import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -36,3 +41,24 @@ def test_run_logs_one_sample(monkeypatch: pytest.MonkeyPatch) -> None:
     status = monitor.get_status()
     assert 15.0 <= status["temperature"] <= 25.0
     assert status["status"] == "OK"
+
+
+def test_a_rejected_config_exits_with_one_error_line(tmp_path: Path) -> None:
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"sensor_name": "sensor-01", "interval_ms": 5000}))
+
+    # The agent passes the saved config in ZELOS_CONFIG_PATH too.
+    result = subprocess.run(
+        [sys.executable, "main.py"],
+        cwd=Path(__file__).resolve().parents[1],
+        env={**os.environ, "ZELOS_CONFIG_PATH": str(config)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 1
+    assert result.stderr.splitlines() == [
+        "ERROR:__main__:Invalid configuration: "
+        "interval_ms: 5000 is greater than the maximum of 1000"
+    ]
