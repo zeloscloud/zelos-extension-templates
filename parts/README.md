@@ -73,9 +73,8 @@ parts/<part>/
 part = "panel"                      # must equal the directory name
 description = "One layout panel"
 
-[[template.variables]]              # fields: name, prompt, default, pattern
+[[template.variables]]              # fields: name, default, pattern
 name = "python_version"
-prompt = "Python version (major.minor, e.g. 3.11)"
 default = "3.11"
 
 [template.borrow]                   # optional, see "The web scaffold"
@@ -271,8 +270,9 @@ contributes `[config]`, `[agent]` and the paths `main.py` and `probe` (the renam
 The borrowed scaffold contributes no table, because `extension.toml.part` of `app-react` is
 excluded. `panel` contributes `[[app.panels]]` and the path `dist`.
 
-Zelos reads the `[agent]`/`[app]` form from 26.0.10 on, so a manifest in that form must set
-`[zelos] version = ">=26.0.10"` or stricter. `base` sets it for every combination.
+Zelos reads the `[agent]`/`[app]` form from 26.0.10 on, so a `[zelos] version` in a manifest of
+that form must be `">=26.0.10"` or stricter; without the key, that floor is the default. `base`
+sets it for every combination.
 
 ## Release archive
 
