@@ -5,10 +5,10 @@ Usage:
     python3 scripts/check_project.py DIR --expect agent,tab,panel
 
 `--expect` names what the project must contribute; anything not named must be absent.
-The checks mirror the manifest rules a rendered project has to satisfy without a build:
-extension.toml parses, uses the new form ([agent] and/or [app], never [host] or [runtime]),
-every [package] path and every manifest path exists, with the assets each document loads (the
-web parts ship a built dist/), and the manifest requires Zelos >=26.0.10, the first to read the new form.
+`zelos extensions package` validates the manifest itself; these checks cover what it does not:
+the contributions match the selection, [package] paths has no duplicates, an agent runtime has
+its pyproject.toml, each document's assets exist (the web parts ship a built dist/), no fragment
+is left, every JSON and TOML file parses, Dependabot watches what exists and the Justfile parses.
 Standard library only (Python 3.11+).
 """
 
@@ -24,9 +24,6 @@ import tomllib
 from pathlib import Path
 
 CONTRIBUTIONS = ("agent", "tab", "panel")
-FORM_ZELOS_VERSION = ">=26.0.10"
-LEGACY_TOP_LEVEL = ("host", "runtime", "workdir", "targets", "env", "stop")
-PANEL_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 ASSET_REF_RE = re.compile(r'(?:src|href)="(\.{1,2}/[^"]+)"')
 SKIP_DIRS = {"node_modules", ".git", ".venv"}
 # What each Dependabot ecosystem reads in its directory; a directory without it fails every run.
@@ -40,10 +37,6 @@ DEPENDABOT_ENTRY_RE = re.compile(
 )
 
 
-def _covered(path: str, package_paths: list[str]) -> bool:
-    return any(Path(path).is_relative_to(p) for p in package_paths)
-
-
 def check(project: Path, expect: set[str]) -> list[str]:
     try:
         manifest = tomllib.loads((project / "extension.toml").read_text())
@@ -55,12 +48,17 @@ def check(project: Path, expect: set[str]) -> list[str]:
     tab_entry = tab.get("entry") if isinstance(tab, dict) else tab
     package_paths = manifest.get("package", {}).get("paths", [])
     has = {"agent": "agent" in manifest, "tab": tab is not None, "panel": bool(panels)}
+    errors = _check_contributions(expect, has)
+    if len(package_paths) != len(set(package_paths)):
+        errors.append(f"[package] paths has duplicates: {package_paths}")
+    if has["agent"] and not (project / "pyproject.toml").is_file():
+        errors.append("agent runtime without pyproject.toml")
+    errors += _check_assets(project, "[app] tab", tab_entry)
+    for panel in panels:
+        label = f"panel {panel.get('id')!r} entry"
+        errors += _check_assets(project, label, panel.get("entry"))
     return [
-        *_check_manifest(manifest, expect, has),
-        *_check_package_paths(project, package_paths),
-        *_check_agent(project, manifest.get("agent")),
-        *_check_path(project, package_paths, "[app] tab", tab_entry),
-        *_check_panels(project, package_paths, panels),
+        *errors,
         *_check_web(project, has),
         *_check_files(project),
         *_check_dependabot(project, has),
@@ -68,101 +66,25 @@ def check(project: Path, expect: set[str]) -> list[str]:
     ]
 
 
-def _check_manifest(
-    manifest: dict, expect: set[str], has: dict[str, bool]
-) -> list[str]:
-    errors = [
-        f"extension.toml: legacy top-level key {key!r} is not allowed"
-        for key in LEGACY_TOP_LEVEL
-        if key in manifest
-    ]
+def _check_contributions(expect: set[str], has: dict[str, bool]) -> list[str]:
+    errors = []
     for name in CONTRIBUTIONS:
         if has[name] != (name in expect):
             state = "missing" if name in expect else "unexpected"
             errors.append(f"extension.toml: {state} contribution {name!r}")
-    if "agent" not in manifest and "app" not in manifest:
-        errors.append("extension.toml: must declare [agent], [app], or both")
-    if manifest.get("zelos", {}).get("version") != FORM_ZELOS_VERSION:
-        errors.append(
-            f'extension.toml: the new form requires [zelos] version = "{FORM_ZELOS_VERSION}"'
-        )
     return errors
 
 
-def _check_package_paths(project: Path, package_paths: list[str]) -> list[str]:
-    errors = []
-    if len(package_paths) != len(set(package_paths)):
-        errors.append(f"[package] paths has duplicates: {package_paths}")
-    for path in package_paths:
-        if not (project / path).exists():
-            errors.append(f"[package] paths entry {path!r} does not exist")
-    return errors
-
-
-def _check_path(
-    project: Path, package_paths: list[str], label: str, path: str | None
-) -> list[str]:
-    """A manifest path is present, and [package] ships it."""
-    errors = []
-    if path is None:
-        return errors
-    document = project / path
-    if not document.is_file():
-        errors.append(f"{label} {path!r} does not exist")
-    elif document.suffix == ".html":
-        for ref in ASSET_REF_RE.findall(document.read_text()):
-            if not (document.parent / ref).is_file():
-                errors.append(f"{label} {path!r} references missing {ref!r}")
-    if package_paths and not _covered(path, package_paths):
-        errors.append(f"{label} {path!r} is not covered by [package] paths")
-    return errors
-
-
-def _check_agent(project: Path, agent: dict | None) -> list[str]:
-    errors = []
-    if agent is None:
-        return errors
-    if agent.get("runtime") != "python":
-        errors.append('[agent] runtime must be "python"')
-    if not (project / agent.get("entry", "")).is_file():
-        errors.append(f"[agent] entry {agent.get('entry')!r} does not exist")
-    if not re.fullmatch(r"\d+\.\d+", str(agent.get("python_version", ""))):
-        errors.append("[agent] python_version must look like 3.11")
-    if not (project / "pyproject.toml").is_file():
-        errors.append("agent runtime without pyproject.toml")
-    return errors
-
-
-def _check_panels(
-    project: Path, package_paths: list[str], panels: list[dict]
-) -> list[str]:
-    errors = []
-    seen_ids: set[str] = set()
-    for panel in panels:
-        panel_id = panel.get("id", "")
-        if panel_id in seen_ids:
-            errors.append(f"duplicate panel id {panel_id!r}")
-        seen_ids.add(panel_id)
-        errors += _check_panel(panel_id, panel)
-        for field in ("entry", "icon", "options_schema"):
-            label = f"panel {panel_id!r} {field}"
-            errors += _check_path(project, package_paths, label, panel.get(field))
-    return errors
-
-
-def _check_panel(panel_id: str, panel: dict) -> list[str]:
-    errors = []
-    if not PANEL_ID_RE.match(panel_id) or len(panel_id) > 40:
-        errors.append(f"panel id {panel_id!r} is invalid")
-    if not 1 <= len(panel.get("name", "")) <= 60:
-        errors.append(f"panel {panel_id!r}: name must be 1 to 60 characters")
-    if not 0.5 <= float(panel.get("default_height", 2)) <= 4.0:
-        errors.append(f"panel {panel_id!r}: default_height must be in 0.5..4.0")
-    if panel.get("binds", "any") not in ("any", "accepted"):
-        errors.append(f"panel {panel_id!r}: binds must be 'any' or 'accepted'")
-    if "entry" not in panel:
-        errors.append(f"panel {panel_id!r}: entry is required")
-    return errors
+def _check_assets(project: Path, label: str, path: str | None) -> list[str]:
+    """Every asset an HTML document loads exists; the CLI checks the document itself."""
+    document = project / path if path else None
+    if document is None or document.suffix != ".html" or not document.is_file():
+        return []
+    return [
+        f"{label} {path!r} references missing {ref!r}"
+        for ref in ASSET_REF_RE.findall(document.read_text())
+        if not (document.parent / ref).is_file()
+    ]
 
 
 def _check_web(project: Path, has: dict[str, bool]) -> list[str]:
