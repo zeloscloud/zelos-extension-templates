@@ -121,14 +121,13 @@ smoke:
       echo "Warning: the app extension SDK is not on npm at the range web/package.json names, and SDK_TGZ is not set."
       echo "  Projects with a web project are rendered, checked and packaged, but their CI is skipped."
     fi
-    # Packaging needs a CLI that reads the [agent] and [app] manifest form, i.e. one with --with.
-    zelos=""
-    if "{{zelos_bin}}" extensions create --help 2>/dev/null | grep -q -- "--with"; then
-      zelos=$(command -v "{{zelos_bin}}")
-    else
-      echo "Warning: '{{zelos_bin}}' cannot package projects made from parts; packaging is skipped."
+    # Packaging runs the CLI's manifest validator, which check_project.py does not repeat.
+    if ! "{{zelos_bin}}" extensions create --help 2>/dev/null | grep -q -- "--with"; then
+      echo "Error: '{{zelos_bin}}' cannot package projects made from parts."
       echo "  Set ZELOS_BIN to a CLI whose 'extensions create' has --with."
+      exit 1
     fi
+    zelos=$(command -v "{{zelos_bin}}")
 
     out=$(mktemp -d)
     trap 'rm -rf "$out"' EXIT
@@ -144,17 +143,15 @@ smoke:
       python3 scripts/check_project.py "$project" --expect "$expect"
       cat "$project/extension.toml"
       actionlint "$project"/.github/workflows/*.yml
-      if [[ -n "$zelos" ]]; then
-        # The project packages as rendered, before any install or build: the web parts ship a built dist/.
-        (
-          cd "$project"
-          "$zelos" extensions package .
-          if [[ -f web/package.json ]]; then
-            tar -tzf probe-0.1.0.tar.gz | grep -E '^(\./)?dist/.+[^/]$' || { echo "  ✗ the package has no dist/"; exit 1; }
-          fi
-          rm probe-0.1.0.tar.gz
-        )
-      fi
+      # The project packages as rendered, before any install or build: the web parts ship a built dist/.
+      (
+        cd "$project"
+        "$zelos" extensions package .
+        if [[ -f web/package.json ]]; then
+          tar -tzf probe-0.1.0.tar.gz | grep -E '^(\./)?dist/.+[^/]$' || { echo "  ✗ the package has no dist/"; exit 1; }
+        fi
+        rm probe-0.1.0.tar.gz
+      )
       if [[ -f "$project/web/package.json" && -z "$sdk" ]]; then
         echo "  - skipped the project CI: no app extension SDK to install"
         skipped=$((skipped + 1))
@@ -168,7 +165,7 @@ smoke:
           (cd web && npm install --no-audit --no-fund "$sdk")
         fi
         just ci-install check test build
-        if [[ -n "$zelos" ]]; then "$zelos" extensions package .; fi
+        "$zelos" extensions package .
       )
     done
     echo ""
