@@ -30,7 +30,6 @@ export default defineConfig({
   publicDir: resolve(import.meta.dirname, "public"),
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: { "@": src },
     // One React instance, also when the SDK is linked locally (file: or npm link).
     dedupe: ["react", "react-dom"],
   },
