@@ -67,7 +67,7 @@ Each deprecated template has:
 CI runs on pushes to `main` and on pull requests:
 
 - **Validate** runs `just validate` on the whole-project templates and checks the formatting of the scripts, the parts' web sources and the whole-project templates' sources.
-- **Smoke test template parts** runs `just smoke`: the renderer's tests, then the five combinations of parts (agent; tab; panel; agent + panel; agent + tab + panel) rendered with the reference renderer. It checks each project, lints its workflows with actionlint, packages it with the published Zelos CLI, and runs its CI: install, check, test, build and package. Then `just verify-dist` compares each web part's shipped `dist/` with a fresh build.
+- **Smoke test template parts** runs `just smoke`: the renderer's tests, then the five combinations of parts (agent; tab; panel; agent + panel; agent + tab + panel) rendered with the reference renderer. It checks each project, lints its workflows with actionlint, packages it with the published Zelos CLI, and runs its CI: install, check, test, build and package. Then `just verify-dist` compares each web part's shipped lockfile with what `npm install` writes, and its `dist/` with a fresh build.
 - **Smoke test agent/python** and **Smoke test app/react** run `just smoke-agent` and `just smoke-app`. They test a whole-project template only with a CLI without `--with`, so with the published CLI they exit without testing it.
 
 The release workflow runs the same jobs on a tag push, creates the GitHub release only if all pass, and attaches `parts.tar.gz`.

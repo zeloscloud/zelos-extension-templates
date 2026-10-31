@@ -8,7 +8,7 @@ panels, and one `extension.toml` describes all of them.
 | ---- | ---- | -------- | -------- |
 | `base` | `extension.toml`, README, license, Justfile, CI and release workflows, dependabot, pre-commit hooks, VS Code settings | identity, `[zelos]`, `[package]` | always included |
 | `agent-python` | `main.py`, the Python package, `pyproject.toml`, `config.schema.json`, tests | `[config]`, `[agent]` | `agent` |
-| `app-react` | the Vite + React + Tailwind project under `web/` (ESLint, Prettier, Vitest), with a tab in `web/src/tab/` and its build in `dist/` | `[app] tab` | `tab` |
+| `app-react` | the Vite + React + Tailwind project under `web/` (ESLint, Prettier, Vitest) with its lockfile, a tab in `web/src/tab/` and its build in `dist/` | `[app] tab` | `tab` |
 | `panel` | one panel, `example`, in `web/src/panels/`, and its build in `dist/` | `[[app.panels]]` | `panel` |
 
 ## Create a project
@@ -200,6 +200,17 @@ they copy byte for byte; a document that shows a variable, such as the tab's `<t
 `include`. `just verify-dist` builds each web part again and compares the result with its
 `dist/`. It rewrites a stale `dist/` in place; commit it with `git add -f`, because
 `.gitignore` ignores `dist/`.
+
+### The shipped lockfile
+
+`app-react` ships `web/package-lock.json`, the lockfile that `npm install` writes for its
+`web/package.json`, and `panel` borrows it with the scaffold. A new project's first commit locks
+its web dependencies: `just ci-install` and CI run `npm ci`, `just install` leaves the lockfile
+as it is, and Dependabot updates it with `package.json`. npm writes the package name into the
+lockfile twice, so the lockfile is in `include` with `{{ name }}` in those two places; the rest
+copies as npm wrote it. `just verify-dist` runs `npm install` in each rendered web part and
+rewrites the lockfile in place when npm changes it. Run it after every change to
+`web/package.json`, and commit the lockfile with it.
 
 ### CI and release workflows
 
