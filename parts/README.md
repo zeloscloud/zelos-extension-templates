@@ -55,8 +55,8 @@ Two values are derived from these. `project_slug` is `name` in lowercase with `-
 Three more say what the caller chose: `with_agent`, `with_tab` and `with_panel` are `true` when
 `agent-python`, `app-react` or `panel` is selected, and absent otherwise. A part rendered only
 through a borrow does not set its flag, and a value given for a flag is ignored. They are for the
-few files `base` owns that cannot follow the files on disk, such as `.github/dependabot.yml`:
-`{% if with_tab or with_panel %}` holds exactly when the project has `web/`.
+few files `base` owns that cannot follow the files on disk, such as `.github/dependabot.yml` and
+the README: `{% if with_tab or with_panel %}` holds exactly when the project has `web/`.
 
 ## Layout of a part
 
