@@ -1,12 +1,12 @@
-#!/usr/bin/env python3
 """Entry point of the {{ name }} agent runtime."""
 
 import logging
 import signal
+import sys
 from types import FrameType
 
 import zelos_sdk
-from zelos_sdk.extensions import load_config
+from zelos_sdk.extensions import ConfigValidationError, load_config
 from zelos_sdk.hooks.logging import TraceLoggingHandler
 
 from {{ project_slug }}.extension import SensorMonitor
@@ -18,16 +18,20 @@ if __name__ == "__main__":
     # Configure logging before SDK initialization
     logging.basicConfig(level=logging.INFO)
 
-    # Initialize the SDK; the name is the trace source name, and actions register under it
-    zelos_sdk.init(name="{{ project_slug }}", actions=True)
+    # Before init, so a rejected config exits without connecting to the agent
+    try:
+        config = load_config()
+    except ConfigValidationError as e:
+        logger.error("Invalid configuration: %s", "; ".join(m.strip(" •") for m in e.errors))
+        sys.exit(1)
 
-    # Add trace logging handler to send logs to Zelos
-    handler = TraceLoggingHandler("{{ project_slug }}_logger")
-    logging.getLogger().addHandler(handler)
+    # The name must equal `name` in extension.toml: the app and the packager address actions by it
+    zelos_sdk.init(name="{{ name | replace('-', ' ') | title }}", actions=True)
 
-    # Load configuration and create sensor monitor
-    config = load_config()
     monitor = SensorMonitor(config)
+
+    # Send logs to Zelos as a log event of the sensor's own trace source
+    logging.getLogger().addHandler(TraceLoggingHandler(monitor.source))
 
     # Register interactive actions for the Zelos App
     zelos_sdk.actions_registry.register(monitor)

@@ -8,7 +8,7 @@ panels, and one `extension.toml` describes all of them.
 | ---- | ---- | -------- | -------- |
 | `base` | `extension.toml`, README, license, Justfile, CI and release workflows, dependabot, pre-commit hooks, VS Code settings | identity, `[zelos]`, `[package]` | always included |
 | `agent-python` | `main.py`, the Python package, `pyproject.toml`, `config.schema.json`, tests | `[config]`, `[agent]` | `agent` |
-| `app-react` | the Vite + React + Tailwind project under `web/` (ESLint, Prettier, Vitest), with a tab in `web/src/tab/` and its build in `dist/` | `[app] tab` | `tab` |
+| `app-react` | the Vite + React + Tailwind project under `web/` (ESLint, Prettier, Vitest) with its lockfile, a tab in `web/src/tab/` and its build in `dist/` | `[app] tab` | `tab` |
 | `panel` | one panel, `example`, in `web/src/panels/`, and its build in `dist/` | `[[app.panels]]` | `panel` |
 
 ## Create a project
@@ -41,7 +41,7 @@ just smoke                                        # five combinations, checked a
 
 | Variable | Declared by | Default | Use |
 | -------- | ----------- | ------- | --- |
-| `name` | `base` | required | The project name in kebab-case, e.g. `my-extension`. The manifest `name` is its title case, `My Extension`. |
+| `name` | `base` | required | The project name in kebab-case, e.g. `my-extension`: it starts with a letter, and single hyphens join its words, so its slug names an importable Python package. The manifest `name` is its title case, `My Extension`. |
 | `description` | `base` | empty | The description in the manifest, README, `pyproject.toml`, `web/package.json` and the configuration schema. |
 | `author` | `base` | empty | The manifest author, the license holder and the package authors. |
 | `email` | `base` | empty | The author email in `pyproject.toml`. |
@@ -55,8 +55,8 @@ Two values are derived from these. `project_slug` is `name` in lowercase with `-
 Three more say what the caller chose: `with_agent`, `with_tab` and `with_panel` are `true` when
 `agent-python`, `app-react` or `panel` is selected, and absent otherwise. A part rendered only
 through a borrow does not set its flag, and a value given for a flag is ignored. They are for the
-few files `base` owns that cannot follow the files on disk, such as `.github/dependabot.yml`:
-`{% if with_tab or with_panel %}` holds exactly when the project has `web/`.
+few files `base` owns that cannot follow the files on disk, such as `.github/dependabot.yml` and
+the README: `{% if with_tab or with_panel %}` holds exactly when the project has `web/`.
 
 ## Layout of a part
 
@@ -73,9 +73,8 @@ parts/<part>/
 part = "panel"                      # must equal the directory name
 description = "One layout panel"
 
-[[template.variables]]              # fields: name, prompt, default, pattern
+[[template.variables]]              # fields: name, default, pattern
 name = "python_version"
-prompt = "Python version (major.minor, e.g. 3.11)"
 default = "3.11"
 
 [template.borrow]                   # optional, see "The web scaffold"
@@ -161,11 +160,11 @@ distinct names only: `agent-python` adds `run` and `lock`, `app-react` adds `dev
 `test-watch`.
 
 Only one part can produce a file, so `base` owns every file that all projects share:
-`.pre-commit-config.yaml` (ruff hooks for Python files, Prettier and ESLint hooks for `web/`),
-`.github/dependabot.yml` and `.vscode/`. The Dependabot file watches GitHub Actions always, uv at
-`/` with `with_agent` and npm at `/web` with `with_tab` or `with_panel`: Dependabot fails every
-scheduled run for a directory without its manifest. It sets no labels, since a label the
-repository lacks makes every run report an error.
+`.pre-commit-config.yaml` (ruff hooks for Python files, Prettier and ESLint hooks for `web/`, each
+at the version the project's lockfile holds), `.github/dependabot.yml` and `.vscode/`. The
+Dependabot file watches GitHub Actions always, uv at `/` with `with_agent` and npm at `/web` with
+`with_tab` or `with_panel`: Dependabot fails every scheduled run for a directory without its
+manifest. It sets no labels, since a label the repository lacks makes every run report an error.
 
 ### The web scaffold
 
@@ -202,6 +201,17 @@ they copy byte for byte; a document that shows a variable, such as the tab's `<t
 `dist/`. It rewrites a stale `dist/` in place; commit it with `git add -f`, because
 `.gitignore` ignores `dist/`.
 
+### The shipped lockfile
+
+`app-react` ships `web/package-lock.json`, the lockfile that `npm install` writes for its
+`web/package.json`, and `panel` borrows it with the scaffold. A new project's first commit locks
+its web dependencies: `just ci-install` and CI run `npm ci`, `just install` leaves the lockfile
+as it is, and Dependabot updates it with `package.json`. npm writes the package name into the
+lockfile twice, so the lockfile is in `include` with `{{ name }}` in those two places; the rest
+copies as npm wrote it. `just verify-dist` runs `npm install` in each rendered web part and
+rewrites the lockfile in place when npm changes it. Run it after every change to
+`web/package.json`, and commit the lockfile with it.
+
 ### CI and release workflows
 
 `base` ships one `.github/workflows/CI.yml` and one `.github/workflows/release.yml` for every
@@ -211,6 +221,8 @@ combination. Their steps depend on files, not on the parts that were selected:
 - The Node setup runs when `web/package.json` exists: `if: hashFiles('web/package.json') != ''`.
 - The install, check, test and package steps run the shared `just` recipes, which act on what
   exists. One `zelos extensions package .` packages everything.
+- Both workflows install the Zelos CLI and package the project, so a manifest, `[package]` or
+  action inventory error fails CI on the push, not the release on the tag.
 
 A project that adds a part by hand later keeps working without a workflow change.
 
@@ -228,7 +240,8 @@ version = "0.1.0"
 description = "Probe sensors"
 author = "Ada Lovelace"
 repository = "https://github.com/your-org/probe"
-# The marketplace search and Zelos AI find an extension by these words, its name and its description.
+# At most 20 keywords and 10 categories. Marketplace search matches both, the name, description,
+# author and repository. Zelos AI sees the name, description and keywords, not the categories.
 keywords = []
 categories = []
 icon = "assets/icon.svg"
@@ -260,16 +273,17 @@ options_schema = "dist/panels/example.options.json"
 ai_guidance = "Shows the latest value of each bound signal, one row per signal."
 
 [package]
-paths = ["main.py", "probe", "dist"]
+paths = ["LICENSE", "main.py", "probe", "dist"]
 ```
 
-`base` contributes the identity keys, `[zelos]` and an empty `paths`. `agent-python`
+`base` contributes the identity keys, `[zelos]` and the path `LICENSE`. `agent-python`
 contributes `[config]`, `[agent]` and the paths `main.py` and `probe` (the renamed package).
 The borrowed scaffold contributes no table, because `extension.toml.part` of `app-react` is
 excluded. `panel` contributes `[[app.panels]]` and the path `dist`.
 
-Zelos reads the `[agent]`/`[app]` form from 26.0.10 on, so a manifest in that form must set
-`[zelos] version = ">=26.0.10"` or stricter. `base` sets it for every combination.
+Zelos reads the `[agent]`/`[app]` form from 26.0.10 on, so a `[zelos] version` in a manifest of
+that form must be `">=26.0.10"` or stricter; without the key, that floor is the default. `base`
+sets it for every combination.
 
 ## Release archive
 

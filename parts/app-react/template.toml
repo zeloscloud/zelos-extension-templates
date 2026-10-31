@@ -6,6 +6,7 @@ description = "React + Vite web project under web/ with one tab: [app] tab"
 # dist/ ships prebuilt; only the tab document's title is rendered, never the hashed assets.
 include = [
   "web/package.json",
+  "web/package-lock.json",
   "web/src/tab/index.html",
   "dist/tab/index.html",
 ]

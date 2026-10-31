@@ -10,19 +10,7 @@ authors = [{ name = "{{ author | toml_escape }}", email = "{{ email | toml_escap
 authors = [{ name = "{{ author | toml_escape }}" }]
 {% endif %}
 readme = "README.md"
-license = { text = "MIT" }
 requires-python = ">={{ python_version }}"
-keywords = ["zelos", "extension"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-]
 dependencies = [
     "zelos-sdk>=0.0.13a1",
 ]
@@ -70,7 +58,4 @@ select = [
     "SIM",  # flake8-simplify
     "C4",   # flake8-comprehensions
     "PTH",  # flake8-use-pathlib
-]
-ignore = [
-    "B008",   # function call in defaults (common in decorators)
 ]

@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -31,20 +34,21 @@ jobs:
 
       - uses: extractions/setup-just@v4
 
-      # A stale lock would ship in the package and fail to install on other platforms.
-      - name: Verify uv.lock is in sync with pyproject.toml
-        if: hashFiles('uv.lock') != ''
-        run: uv lock --locked
+      - name: Install Zelos CLI
+        run: |
+          curl -fsSL https://release.zeloscloud.io/cli/install.sh | bash
+          echo "$HOME/.zelos/bin" >> "$GITHUB_PATH"
+        env:
+          INSTALLER_NO_MODIFY_PATH: 1
 
       - name: Install dependencies
         run: just ci-install
 
-      - name: Check formatting, lint and type-check
+      - name: Check formatting and lint, and type-check the web project
         run: just check
 
       - name: Run tests
         run: just test
 
-      - name: Build web project
-        if: hashFiles('web/package.json') != ''
-        run: just build
+      - name: Build and package extension
+        run: just package

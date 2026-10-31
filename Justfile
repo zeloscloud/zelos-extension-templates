@@ -121,14 +121,13 @@ smoke:
       echo "Warning: the app extension SDK is not on npm at the range web/package.json names, and SDK_TGZ is not set."
       echo "  Projects with a web project are rendered, checked and packaged, but their CI is skipped."
     fi
-    # Packaging needs a CLI that reads the [agent] and [app] manifest form, i.e. one with --with.
-    zelos=""
-    if "{{zelos_bin}}" extensions create --help 2>/dev/null | grep -q -- "--with"; then
-      zelos=$(command -v "{{zelos_bin}}")
-    else
-      echo "Warning: '{{zelos_bin}}' cannot package projects made from parts; packaging is skipped."
+    # Packaging runs the CLI's manifest validator, which check_project.py does not repeat.
+    if ! "{{zelos_bin}}" extensions create --help 2>/dev/null | grep -q -- "--with"; then
+      echo "Error: '{{zelos_bin}}' cannot package projects made from parts."
       echo "  Set ZELOS_BIN to a CLI whose 'extensions create' has --with."
+      exit 1
     fi
+    zelos=$(command -v "{{zelos_bin}}")
 
     out=$(mktemp -d)
     trap 'rm -rf "$out"' EXIT
@@ -144,17 +143,15 @@ smoke:
       python3 scripts/check_project.py "$project" --expect "$expect"
       cat "$project/extension.toml"
       actionlint "$project"/.github/workflows/*.yml
-      if [[ -n "$zelos" ]]; then
-        # The project packages as rendered, before any install or build: the web parts ship a built dist/.
-        (
-          cd "$project"
-          "$zelos" extensions package .
-          if [[ -f web/package.json ]]; then
-            tar -tzf probe-0.1.0.tar.gz | grep -E '^(\./)?dist/.+[^/]$' || { echo "  ✗ the package has no dist/"; exit 1; }
-          fi
-          rm probe-0.1.0.tar.gz
-        )
-      fi
+      # The project packages as rendered, before any install or build: the web parts ship a built dist/.
+      (
+        cd "$project"
+        "$zelos" extensions package .
+        if [[ -f web/package.json ]]; then
+          tar -tzf probe-0.1.0.tar.gz | grep -E '^(\./)?dist/.+[^/]$' || { echo "  ✗ the package has no dist/"; exit 1; }
+        fi
+        rm probe-0.1.0.tar.gz
+      )
       if [[ -f "$project/web/package.json" && -z "$sdk" ]]; then
         echo "  - skipped the project CI: no app extension SDK to install"
         skipped=$((skipped + 1))
@@ -168,7 +165,7 @@ smoke:
           (cd web && npm install --no-audit --no-fund "$sdk")
         fi
         just ci-install check test build
-        if [[ -n "$zelos" ]]; then "$zelos" extensions package .; fi
+        "$zelos" extensions package .
       )
     done
     echo ""
@@ -178,18 +175,19 @@ smoke:
       echo "✓ All five combinations of parts passed, each with its own CI"
     fi
 
-# Rebuild each web part alone and compare with the dist/ it ships; a stale dist/ is rebuilt in place
+# Install and rebuild each web part alone, and compare with the lockfile and dist/ it ships; a stale one is rewritten in place
 verify-dist:
     #!/usr/bin/env bash
     set -eu -o pipefail
     sdk=$(just _sdk)
     if [[ -z "$sdk" ]]; then
       echo "Warning: the app extension SDK is not on npm at the range web/package.json names, and SDK_TGZ is not set."
-      echo "  Skipped the check of the shipped dist/: nothing to build it with."
+      echo "  Skipped the check of the shipped lockfile and dist/: nothing to install or build them with."
       exit 0
     fi
     out=$(mktemp -d)
     trap 'rm -rf "$out"' EXIT
+    lock=parts/app-react/template/web/package-lock.json
     stale=()
     for part in app-react panel; do
       echo "== $part"
@@ -197,9 +195,24 @@ verify-dist:
       python3 scripts/render_parts.py --parts "base,$part" --out "$project" --var name=probe
       cp -R "$project/dist" "$out/$part/shipped"
       if [[ $sdk == npm ]]; then
+        cp "$project/web/package-lock.json" "$out/$part/shipped-lock.json"
         (cd "$project/web" && npm install --no-audit --no-fund)
+        if cmp -s "$out/$part/shipped-lock.json" "$project/web/package-lock.json"; then
+          echo "  ✓ $lock is what npm install writes"
+        else
+          stale+=("$lock")
+          # npm writes the package name twice; the part renders it.
+          python3 - "$project/web/package-lock.json" "$lock" <<'EOF'
+    import pathlib, sys
+    built, part = map(pathlib.Path, sys.argv[1:])
+    text = built.read_bytes().decode().replace('"name": "probe",', '"name": "{{{{ name }}",')
+    assert text.count('"name": "{{{{ name }}",') == 2, f"{built}: the package name is not written twice"
+    part.write_bytes(text.encode())
+    EOF
+        fi
       else
         (cd "$project/web" && npm install --no-audit --no-fund --no-save "$sdk")
+        echo "  - skipped the check of $lock: SDK_TGZ replaces the SDK it locks"
       fi
       (cd "$project/web" && npm run build)
       if diff -r "$out/$part/shipped" "$project/dist"; then
@@ -224,12 +237,12 @@ verify-dist:
     done
     if [[ ${#stale[@]} -gt 0 ]]; then
       echo ""
-      echo "✗ ${stale[*]} did not match the source; it is now rebuilt."
+      echo "✗ ${stale[*]} did not match the source; it is now rewritten."
       echo "  Commit it with: git add -f -A ${stale[*]}"
       exit 1
     fi
     echo ""
-    echo "✓ The shipped dist/ of each web part matches its source"
+    echo "✓ The shipped files of each web part match their source"
 
 # Render + test agent/python template
 smoke-agent:

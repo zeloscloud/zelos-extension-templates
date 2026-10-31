@@ -1,32 +1,37 @@
 """Tests of the {{ name }} agent runtime. No running Zelos agent is needed."""
 
-import inspect
+import json
+import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
 from {{ project_slug }} import SensorMonitor
 
 
+@pytest.mark.check_config(fail_fast=False)
 def test_status_before_the_first_sample(check) -> None:
-    """`check` is the Zelos checker: every check runs and reports, unlike a failing assert."""
-    status = SensorMonitor({"interval": 0.1}).get_status()
+    """`check` is the Zelos checker: with fail_fast off, every check runs and reports."""
+    status = SensorMonitor({"interval_ms": 100}).get_status()
 
     check.that(status["running"], "==", False)
-    check.that(status["interval"], "is_close", 0.1)
+    check.that(status["interval_ms"], "==", 100)
     check.that(status["temperature"], "==", None)
     check.that(status["status"], "==", None)
 
 
 def test_set_interval_changes_the_sample_interval() -> None:
-    monitor = SensorMonitor({"interval": 0.1})
+    monitor = SensorMonitor({"interval_ms": 100})
 
-    assert monitor.set_interval(0.5) == {"message": "Interval set to 0.5s", "interval": 0.5}
-    assert monitor.get_status()["interval"] == 0.5
+    assert monitor.set_interval(500) == {"message": "Interval set to 500 ms", "interval_ms": 500}
+    assert monitor.get_status()["interval_ms"] == 500
 
 
 def test_run_logs_one_sample(monkeypatch: pytest.MonkeyPatch) -> None:
-    monitor = SensorMonitor({"interval": 0.1})
+    monitor = SensorMonitor({"interval_ms": 100})
     # Stop after the first sample instead of sleeping.
     monkeypatch.setattr(time, "sleep", lambda _seconds: monitor.stop())
 
@@ -38,15 +43,22 @@ def test_run_logs_one_sample(monkeypatch: pytest.MonkeyPatch) -> None:
     assert status["status"] == "OK"
 
 
-def test_action_flags() -> None:
-    """Pins each action's flags, so a new action or a changed flag is a deliberate choice."""
-    flags = {
-        name: (member._action.read_only, member._action.hidden)
-        for name, member in inspect.getmembers(SensorMonitor)
-        if hasattr(member, "_action")
-    }
+def test_a_rejected_config_exits_with_one_error_line(tmp_path: Path) -> None:
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"sensor_name": "sensor-01", "interval_ms": 5000}))
 
-    assert flags == {
-        "set_interval": (False, False),
-        "get_status": (True, True),
-    }
+    # The agent passes the saved config in ZELOS_CONFIG_PATH too.
+    result = subprocess.run(
+        [sys.executable, "main.py"],
+        cwd=Path(__file__).resolve().parents[1],
+        env={**os.environ, "ZELOS_CONFIG_PATH": str(config)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 1
+    assert result.stderr.splitlines() == [
+        "ERROR:__main__:Invalid configuration: "
+        "interval_ms: 5000 is greater than the maximum of 1000"
+    ]

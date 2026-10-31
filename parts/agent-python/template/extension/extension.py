@@ -81,29 +81,28 @@ class SensorMonitor:
                     self.STATUS[status],
                 )
 
-            time.sleep(self.config.get("interval", 0.1))
+            time.sleep(self.config.get("interval_ms", 100) / 1000)
 
     @zelos_sdk.action("Set Interval", "Change sample rate")
-    @zelos_sdk.action.number(
-        "seconds",
-        minimum=0.001,
-        maximum=1.0,
-        multiple_of=0.001,
-        default=0.1,
-        title="Interval (seconds)",
-        description="Sample interval from 1kHz to 1Hz",
+    @zelos_sdk.action.integer(
+        "interval_ms",
+        minimum=1,
+        maximum=1000,
+        default=100,
+        title="Interval (ms)",
+        description="Time between samples, from 1 ms (1 kHz) to 1000 ms (1 Hz)",
         widget="range",
     )
-    def set_interval(self, seconds: float) -> dict[str, Any]:
+    def set_interval(self, interval_ms: int) -> dict[str, Any]:
         """Update the sample interval.
 
-        :param seconds: New interval in seconds (0.001 to 1.0)
+        :param interval_ms: New interval in milliseconds (1 to 1000)
         :return: Confirmation dictionary with keys:
             - message (str): Success message
-            - interval (float): The new interval value
+            - interval_ms (int): The new interval value
         """
-        self.config["interval"] = seconds
-        return {"message": f"Interval set to {seconds}s", "interval": seconds}
+        self.config["interval_ms"] = interval_ms
+        return {"message": f"Interval set to {interval_ms} ms", "interval_ms": interval_ms}
 
     @zelos_sdk.action("Get Status", "Get current sensor status", read_only=True, hidden=True)
     def get_status(self) -> dict[str, Any]:
@@ -113,7 +112,7 @@ class SensorMonitor:
         """
         return {
             "running": self.running,
-            "interval": self.config.get("interval", 0.1),
+            "interval_ms": self.config.get("interval_ms", 100),
             "temperature": self.source.environmental.temperature.get(),
             "pressure": self.source.environmental.pressure.get(),
             "voltage": self.source.power.voltage.get(),

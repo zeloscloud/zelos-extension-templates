@@ -4,7 +4,6 @@ description = "Python agent runtime: main.py, a Python package, pyproject.toml a
 
 [[template.variables]]
 name = "python_version"
-prompt = "Python version (major.minor, e.g. 3.11)"
 default = "3.11"
 
 [template.substitution]

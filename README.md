@@ -26,19 +26,21 @@ just smoke                                        # render all five combinations
 
 ## Whole-project templates (deprecated)
 
-> **Deprecated:** `agent/python` and `app/react` stay for CLIs without `--with` for one more release, then they are removed. New projects use the parts above.
+> **Deprecated:** `agent/python` and `app/react` serve Zelos CLI 0.1.10 and older (`--type`) and Create Extension in Zelos 26.0.9 and older, which render a whole-project template from the latest release. Their manifests use the old `[host]` form, which `zelos extensions package` refuses from CLI 0.1.11 on. New projects use the parts above.
 
 | Template | Type | Stack | Description |
 |----------|------|-------|-------------|
 | `agent/python` | Agent | Python | Python agent extension with data streaming, actions, and configuration |
 | `app/react` | App | React + Vite | React web app extension with the Zelos app extension SDK |
 
+With Zelos CLI 0.1.10 or older:
+
 ```bash
 zelos extensions create my-sensor --type agent
 zelos extensions create my-dashboard --type app
 ```
 
-The CLI prompts for variables defined in each template's `template.toml`, renders the project, installs dependencies, and initializes a git repository.
+The CLI renders the project from the variables in the template's `template.toml`, installs dependencies, and initializes a git repository. CLI 0.1.11 and later read `--type` as `--with` and render parts.
 
 ## Layout
 
@@ -51,18 +53,24 @@ zelos-extension-templates/
 ├── scripts/                   # Reference renderer, project checks and their tests
 ├── agent/python/              # Deprecated whole-project template
 ├── app/react/                 # Deprecated whole-project template
-└── .github/workflows/         # CI validates the parts and both templates
+└── .github/workflows/         # CI and the release workflow
 ```
 
-## Template Structure
+## Whole-project template structure
 
-Each template has:
+Each deprecated template has:
 - **`template.toml`** — declares variables (name, prompt, default, pattern), substitution includes, and optional directory renames
 - **`template/`** — the project skeleton; files listed in `[template.substitution].include` are rendered through MiniJinja, all others are copied as-is
 
 ## CI
 
-On every push, CI renders the five combinations of parts (agent; tab; panel; agent + panel; agent + tab + panel) with the reference renderer, checks each project, lints its workflows with actionlint and runs its CI: install, format check, lint, type-check, test and build. It also renders each whole-project template through the published Zelos CLI, then runs the generated project's full check suite — lint, type-check, test, build, and package. A separate release workflow re-runs these checks on tag push, creates the GitHub release only if all pass, and attaches `parts.tar.gz`.
+CI runs on pushes to `main` and on pull requests:
+
+- **Validate** runs `just validate` on the whole-project templates and checks the formatting of the scripts, the parts' web sources and the whole-project templates' sources.
+- **Smoke test template parts** runs `just smoke`: the renderer's tests, then the five combinations of parts (agent; tab; panel; agent + panel; agent + tab + panel) rendered with the reference renderer. It checks each project, lints its workflows with actionlint, packages it with the published Zelos CLI, and runs its CI: install, check, test, build and package. Then `just verify-dist` compares each web part's shipped lockfile with what `npm install` writes, and its `dist/` with a fresh build.
+- **Smoke test agent/python** and **Smoke test app/react** run `just smoke-agent` and `just smoke-app`. They test a whole-project template only with a CLI without `--with`, so with the published CLI they exit without testing it.
+
+The release workflow runs the same jobs on a tag push, creates the GitHub release only if all pass, and attaches `parts.tar.gz`.
 
 ## Contributing
 

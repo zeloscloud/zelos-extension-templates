@@ -6,9 +6,11 @@ Run: python3 -m unittest discover -s scripts -p 'test_*.py'
 
 from __future__ import annotations
 
+import json
 import re
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -296,6 +298,31 @@ class RealPartsTest(unittest.TestCase):
             )
             self.assertEqual((out / "extension.toml").read_text(), match.group(1))
 
+    def test_the_name_must_make_an_importable_package(self) -> None:
+        # The slug names the Python package; a leading digit or a doubled hyphen breaks it.
+        for bad in ("2fast", "my--ext", "-ext", "ext-", "Ext"):
+            with (
+                self.subTest(bad),
+                tempfile.TemporaryDirectory() as tmp,
+                self.assertRaisesRegex(RenderError, "does not match required pattern"),
+            ):
+                render_parts(["base"], Path(tmp) / "p", {"name": bad})
+        with tempfile.TemporaryDirectory() as tmp:
+            render_parts(["base"], Path(tmp) / "p", {"name": "probe-2"})
+
+    def test_actions_register_under_the_manifest_name(self) -> None:
+        # The app resolves an extension's actions by the manifest name, and packaging
+        # inventories them under it, so the SDK must init under the same name.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "probe"
+            render_parts(["base", "agent-python"], out, {"name": "probe-sensor"})
+            manifest = tomllib.loads((out / "extension.toml").read_text())
+            init = re.search(
+                r'zelos_sdk\.init\(name="([^"]*)"', (out / "main.py").read_text()
+            )
+            assert init, "main.py does not call zelos_sdk.init(name=...)"
+            self.assertEqual(init.group(1), manifest["name"])
+
     def test_output_bytes_match_the_sources_on_every_os(self) -> None:
         # Text mode writes CRLF on Windows; the renderer must not use it.
         fail = mock.Mock(side_effect=AssertionError("text-mode file IO"))
@@ -349,6 +376,27 @@ class RealPartsTest(unittest.TestCase):
                         b"<title>Probe</title>",
                         (out / "dist/tab/index.html").read_bytes(),
                     )
+
+    def test_web_projects_ship_the_lockfile_of_their_package_json(self) -> None:
+        # npm install rewrites a lockfile whose root package differs from package.json.
+        keys = ("name", "version", "dependencies", "devDependencies", "engines")
+        for parts in (
+            ["app-react"],
+            ["panel"],
+            ["agent-python", "panel"],
+            ["agent-python", "app-react", "panel"],
+        ):
+            with self.subTest(parts), tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "probe-sensor"
+                render_parts(parts, out, dict(WORKED_EXAMPLE_VARS, name="probe-sensor"))
+                package = json.loads((out / "web/package.json").read_bytes())
+                lock = json.loads((out / "web/package-lock.json").read_bytes())
+                self.assertEqual(lock["name"], package["name"])
+                self.assertEqual(lock["version"], package["version"])
+                self.assertEqual(
+                    {key: lock["packages"][""].get(key) for key in keys},
+                    {key: package.get(key) for key in keys},
+                )
 
     def test_dependabot_watches_exactly_what_each_combination_has(self) -> None:
         cases = (

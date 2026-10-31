@@ -2,21 +2,20 @@
 
 ## Prerequisites
 
-- [Zelos CLI](https://release.zeloscloud.io) (`zelos` on PATH, or set `ZELOS_BIN`)
-- Python 3.11+ with [ruff](https://docs.astral.sh/ruff/)
+- [Zelos CLI](https://docs.zeloscloud.io/getting-started/install-cli/) with `extensions create --with` (`zelos` on PATH, or set `ZELOS_BIN`)
+- Python 3.11+, [uv](https://docs.astral.sh/uv/) and [ruff](https://docs.astral.sh/ruff/)
 - Node.js 24 LTS with npm
 - [actionlint](https://github.com/rhysd/actionlint) (the smoke tests lint the rendered workflows)
 
 ## Quick reference
 
 ```bash
-just fmt          # Format template source files
+just fmt          # Format the scripts and the template sources
 just smoke        # Test the parts renderer, render all five combinations of parts and run their CI
 just render-parts agent-python,panel /tmp/probe   # Render one combination of parts
-just ci           # Run everything: parts smoke, validate, format-check, render + test both templates
-just smoke-agent  # Render + test agent template only
-just smoke-app    # Render + test app template only
-just validate     # Fast structural check (no CLI needed)
+just verify-dist  # Install and rebuild each web part, and compare it with the lockfile and dist/ it ships
+just validate     # Check the structure of the whole-project templates (no CLI needed)
+just ci           # Run everything: smoke, verify-dist, validate, format check, smoke-agent, smoke-app
 ```
 
 ## Using an unreleased CLI
@@ -27,91 +26,36 @@ Set `ZELOS_BIN` to test with a local CLI build:
 ZELOS_BIN=~/path/to/src/api/rs/target/debug/zelos just ci
 ```
 
-## Test template changes locally
-
-### Full CI (both templates)
-
-```bash
-just ci
-```
-
-This validates structure, checks source formatting, renders both templates through the CLI, and runs each generated project's full `just ci` — format-check, lint, type-check, test, and package.
-
-### Agent (Python)
-
-```bash
-just smoke-agent
-```
-
-### App (React)
-
-```bash
-just smoke-app
-```
-
-### App — local output for manual testing
-
-Renders the app template to a persistent directory (default `~/Desktop/delete`):
-
-```bash
-just test-app-local
-just test-app-local my-dashboard
-```
-
-Override the output location:
-
-```bash
-ZELOS_TEMPLATE_OUTPUT_ROOT=/tmp just test-app-local my-app
-```
-
 ## Parts development
 
 - `scripts/render_parts.py` is the executable form of the merge rules in `parts/README.md`. Change both together; the CLI copies its behavior from them.
 - Add a file with `{{ }}` or `{% %}` expressions to the part's `include` list. Keep files without variables out of it, so `${{ }}` and Justfile `{{VERSION}}` need no `{% raw %}`.
 - A part never overwrites another part's file. Extend `extension.toml` with `extension.toml.part` and the `Justfile` with `Justfile.part`.
-- `just smoke` must pass; it also checks that the worked example in `parts/README.md` matches a real render. It needs uv, npm and actionlint. Before the app extension SDK version that `web/package.json` names is on npm, set `SDK_TGZ` to a tarball from `npm pack`; without it the web projects are rendered and checked, and their CI is skipped. Packaging runs when `ZELOS_BIN` (or `zelos`) has `extensions create --with`.
-
-## Template development
-
-### Adding or modifying template files
-
-- Files containing `{{ }}` or `{% %}` expressions **must** be listed in `[template.substitution].include` in the template's `template.toml`
-- Static files (no MiniJinja expressions) are copied as-is and do **not** need to be in the include list
-- Keep both templates consistent: same variable names, same Justfile recipe names, same CI structure
-
-### App template `dist/`
-
-The app template ships a prebuilt `dist/`, so a new project installs without a build. After changing the app template's source or dependencies, rebuild it in place and stage it with `-f`, because the template's own `.gitignore` ignores `dist/`:
-
-```bash
-cd app/react/template && npm ci && npm run build
-git add -f dist
-```
-
-`just smoke-app` fails when the committed `dist/` differs from a fresh build.
+- `just smoke` must pass; it also checks that the worked example in `parts/README.md` matches a real render. It needs uv, npm and actionlint. Before the app extension SDK version that `web/package.json` names is on npm, set `SDK_TGZ` to a tarball from `npm pack`; without it the web projects are rendered and checked, and their CI is skipped. It needs a Zelos CLI with `extensions create --with` (`zelos`, or `ZELOS_BIN`): packaging each project runs the CLI's manifest validator.
+- After a change to a web part's source or dependencies, run `just verify-dist`. It rewrites a stale `parts/app-react/template/web/package-lock.json` and a stale `dist/` in place; commit both, `dist/` with `git add -f`, because `.gitignore` ignores `dist/`. A dependency change to `web/package.json` without the lockfile fails the renderer's tests.
 
 ### Generated project Justfile contract
 
-Both templates expose the same top-level commands for extension developers:
+Every combination of parts has the same shared recipes, which act on the parts the project has:
 
-`install`, `dev`, `format`, `check`, `test`, `build`, `package`, `release VERSION`, `clean`
+`install`, `ci-install`, `format`, `check`, `test`, `build`, `package`, `ci`, `release VERSION`, `delete-release VERSION`, `clean`
 
-Plus a unified `ci` recipe used by this repo's smoke tests and by the generated project's own CI workflow.
+`agent-python` adds `run` and `lock`; `app-react` adds `dev`, `watch` and `test-watch`. The generated CI workflow runs the steps of `ci`: `ci-install`, `check`, `test` and `package`.
 
-### Adding a new template variant
+## Whole-project templates (deprecated)
 
-1. Create `{type}/{stack}/template.toml` with variables and include list
-2. Create `{type}/{stack}/template/` with the project skeleton
-3. Add a smoke test in the root `Justfile`
-4. Add the template to the CI workflow
-5. Update `README.md`
+`agent/python` and `app/react` serve Zelos CLI 0.1.10 and older and Create Extension in Zelos 26.0.9 and older. Change them only to keep those working.
+
+- `just smoke-agent` and `just smoke-app` render them with `--type` and run the project's CI. With a CLI that has `--with` they exit without testing, because such a CLI renders parts for `--type`. Set `ZELOS_BIN` to CLI 0.1.10 or older to test them.
+- `just test-app-local [NAME]` renders `--type app` from this checkout into `~/Desktop/delete/NAME` (or `$ZELOS_TEMPLATE_OUTPUT_ROOT/NAME`) and runs its `just ci`. A CLI with `--with` renders the tab part there; an older one renders `app/react`.
+- `app/react` ships a prebuilt `dist/`. After a change to its source or dependencies, rebuild it with `cd app/react/template && npm ci && npm run build`, then `git add -f dist`.
 
 ## Release process
 
-1. `just fmt` — format template source files
-2. `just ci` — validate + render + test + package both templates
+1. `just fmt` — format the scripts and the template sources
+2. `just ci` — run every check
 3. `just release X.Y.Z` — runs `ci` again, then tags and pushes
-4. CI re-validates on the tag and creates the GitHub release automatically
+4. The release workflow runs CI on the tag and creates the GitHub release with `parts.tar.gz`
 
 ### Release ordering
 
@@ -123,14 +67,13 @@ Templates depend on CLI features. When CLI and templates change together:
 
 Template repo tags are independent of the CLI version.
 
-When the **app** template must align with a **new published** SDK:
+When the web parts must align with a **new published** SDK:
 
 1. **Publish** `@zeloscloud/app-extension-sdk` to npm
-2. **Update** `app/react/template/package.json` to the published semver range
+2. **Update** `parts/app-react/template/web/package.json` to the published semver range, and run `just verify-dist` to update the lockfile and `dist/`
 3. **Push** and **tag** a template release
 
 ## Pull requests
 
 - Keep `template.toml` variables and substitution lists in sync with the Zelos CLI create flow
 - Run `just ci` before submitting
-- Both templates must maintain DX parity: same Justfile commands, same CI structure, same VS Code configuration
