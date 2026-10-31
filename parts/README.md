@@ -228,7 +228,8 @@ version = "0.1.0"
 description = "Probe sensors"
 author = "Ada Lovelace"
 repository = "https://github.com/your-org/probe"
-# The marketplace search and Zelos AI find an extension by these words, its name and its description.
+# At most 20 keywords and 10 categories. Marketplace search matches both, the name, description,
+# author and repository. Zelos AI sees the name, description and keywords, not the categories.
 keywords = []
 categories = []
 icon = "assets/icon.svg"
@@ -260,10 +261,10 @@ options_schema = "dist/panels/example.options.json"
 ai_guidance = "Shows the latest value of each bound signal, one row per signal."
 
 [package]
-paths = ["main.py", "probe", "dist"]
+paths = ["LICENSE", "main.py", "probe", "dist"]
 ```
 
-`base` contributes the identity keys, `[zelos]` and an empty `paths`. `agent-python`
+`base` contributes the identity keys, `[zelos]` and the path `LICENSE`. `agent-python`
 contributes `[config]`, `[agent]` and the paths `main.py` and `probe` (the renamed package).
 The borrowed scaffold contributes no table, because `extension.toml.part` of `app-react` is
 excluded. `panel` contributes `[[app.panels]]` and the path `dist`.
