@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "title": "Example panel",
+  "title": "Example Panel",
   "properties": {
     "precision": {
       "type": "integer",
