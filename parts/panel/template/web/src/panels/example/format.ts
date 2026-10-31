@@ -1,4 +1,4 @@
-/** Formats a latest value: numbers get `precision` decimals, anything else is shown as-is. */
+/** Formats a latest value: fractional numbers get `precision` decimals, others show as-is. */
 export function formatValue(value: string, precision: number): string {
   const trimmed = value.trim();
   const number = Number(trimmed);
