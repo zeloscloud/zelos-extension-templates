@@ -37,7 +37,7 @@ format: _deps
     if [[ -f pyproject.toml ]]; then uv run ruff format . && uv run ruff check --fix .; fi
     if [[ -f web/package.json ]]; then (cd web && npm run format); fi
 
-# Check formatting, lint and type-check
+# Check formatting and lint (ruff, Prettier, ESLint), and type-check the web project (tsc)
 check: _deps
     if [[ -f pyproject.toml ]]; then uv run ruff format --check . && uv run ruff check .; fi
     if [[ -f web/package.json ]]; then (cd web && npm run format:check && npm run check); fi
