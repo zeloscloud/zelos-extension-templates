@@ -161,11 +161,11 @@ distinct names only: `agent-python` adds `run` and `lock`, `app-react` adds `dev
 `test-watch`.
 
 Only one part can produce a file, so `base` owns every file that all projects share:
-`.pre-commit-config.yaml` (ruff hooks for Python files, Prettier and ESLint hooks for `web/`),
-`.github/dependabot.yml` and `.vscode/`. The Dependabot file watches GitHub Actions always, uv at
-`/` with `with_agent` and npm at `/web` with `with_tab` or `with_panel`: Dependabot fails every
-scheduled run for a directory without its manifest. It sets no labels, since a label the
-repository lacks makes every run report an error.
+`.pre-commit-config.yaml` (ruff hooks for Python files, Prettier and ESLint hooks for `web/`, each
+at the version the project's lockfile holds), `.github/dependabot.yml` and `.vscode/`. The
+Dependabot file watches GitHub Actions always, uv at `/` with `with_agent` and npm at `/web` with
+`with_tab` or `with_panel`: Dependabot fails every scheduled run for a directory without its
+manifest. It sets no labels, since a label the repository lacks makes every run report an error.
 
 ### The web scaffold
 
