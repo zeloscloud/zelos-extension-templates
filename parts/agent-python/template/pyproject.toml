@@ -12,7 +12,7 @@ authors = [{ name = "{{ author | toml_escape }}" }]
 readme = "README.md"
 requires-python = ">={{ python_version }}"
 dependencies = [
-    "zelos-sdk>=0.0.13a1",
+    "zelos-sdk>=0.0.13",
 ]
 
 {% if repository %}
